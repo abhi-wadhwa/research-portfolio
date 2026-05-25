@@ -21,3 +21,7 @@ A study of backward stochastic differential equations and their applications to 
 ### [S26 — Deep Learning for High-Frequency Trading Signal Detection](s26-dl-hft/)
 
 Theory-heavy treatment of ML architectures for limit order book signal detection. Derives Rademacher complexity bounds for RNNs, temporal convolutional networks, and Transformers applied to HFT data. Simulates a Hawkes-process limit order book, trains models on synthetic microstructure features, and analyzes online learning regret bounds for non-stationary environments.
+
+### [S26 — LLM Agents for Cross-Platform Prediction Market Arbitrage](s26-prediction-arb/)
+
+Benchmarks LLM agents on cross-platform prediction market arbitrage between Kalshi and Polymarket. Builds a hybrid NLP matching pipeline (regex + Sentence-BERT + rapidfuzz) for cross-platform contract resolution, implements fee-adjusted arbitrage detection, and evaluates LLM agents against rule-based baselines on a 90-day paper trading simulation. Finds LLMs add value at the matching layer but fail at fee arithmetic.
