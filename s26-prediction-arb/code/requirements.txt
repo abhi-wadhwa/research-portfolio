@@ -5,3 +5,4 @@ seaborn>=0.12
 pandas>=2.0
 sentence-transformers>=2.2
 rapidfuzz>=3.0
+requests>=2.28

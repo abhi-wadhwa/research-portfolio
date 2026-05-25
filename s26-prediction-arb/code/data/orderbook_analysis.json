@@ -1,0 +1,62 @@
+[
+  {
+    "kalshi_ticker": "KXMVESPORTSMULTIGAMEEXTENDED-S20267C7811E8A29-7D5A75002F1",
+    "poly_question": "Will the Oklahoma City Thunder win the NBA Western Conference Finals?",
+    "match_confidence": 0.564,
+    "kalshi_best_bid": 0.0,
+    "kalshi_best_ask": 1.0,
+    "poly_best_bid": 0.62,
+    "poly_best_ask": 0.63,
+    "best_direction": "buy_kalshi_yes",
+    "gross_edge": -0.38,
+    "net_edge": -0.3847
+  },
+  {
+    "kalshi_ticker": "KXMVESPORTSMULTIGAMEEXTENDED-S20262EA5035208F-1CDD15DFB08",
+    "poly_question": "Will the Oklahoma City Thunder win the NBA Western Conference Finals?",
+    "match_confidence": 0.5367,
+    "kalshi_best_bid": 0.0,
+    "kalshi_best_ask": 0.062,
+    "poly_best_bid": 0.62,
+    "poly_best_ask": 0.63,
+    "best_direction": "buy_kalshi_yes",
+    "gross_edge": 0.558,
+    "net_edge": 0.5532
+  },
+  {
+    "kalshi_ticker": "KXMVESPORTSMULTIGAMEEXTENDED-S20262EA5035208F-E39AACB93BF",
+    "poly_question": "Will the Oklahoma City Thunder win the NBA Western Conference Finals?",
+    "match_confidence": 0.5367,
+    "kalshi_best_bid": 0.0,
+    "kalshi_best_ask": 1.0,
+    "poly_best_bid": 0.62,
+    "poly_best_ask": 0.63,
+    "best_direction": "buy_kalshi_yes",
+    "gross_edge": -0.38,
+    "net_edge": -0.3847
+  },
+  {
+    "kalshi_ticker": "KXMVESPORTSMULTIGAMEEXTENDED-S20262EA5035208F-E59FE6CF3F3",
+    "poly_question": "Will the Oklahoma City Thunder win the NBA Western Conference Finals?",
+    "match_confidence": 0.5343,
+    "kalshi_best_bid": 0.0,
+    "kalshi_best_ask": 1.0,
+    "poly_best_bid": 0.62,
+    "poly_best_ask": 0.63,
+    "best_direction": "buy_kalshi_yes",
+    "gross_edge": -0.38,
+    "net_edge": -0.3847
+  },
+  {
+    "kalshi_ticker": "KXMVESPORTSMULTIGAMEEXTENDED-S20267C7811E8A29-7D5A75002F1",
+    "poly_question": "Will the Oklahoma City Thunder win the 2026 NBA Finals?",
+    "match_confidence": 0.5223,
+    "kalshi_best_bid": 0.0,
+    "kalshi_best_ask": 1.0,
+    "poly_best_bid": 0.48,
+    "poly_best_ask": 0.49,
+    "best_direction": "buy_poly_yes",
+    "gross_edge": -0.49,
+    "net_edge": -0.4902
+  }
+]
