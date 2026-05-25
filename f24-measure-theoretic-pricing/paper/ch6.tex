@@ -1,0 +1,194 @@
+% Ch6 — Differentiability and Approximation by C^1 Functions
+% Evans & Gariepy pp. 227–252. The synthesis chapter.
+
+\section{November 4, 2024}\label{sec:nov4}
+
+I'm tired. Four chapters of measure theory will do that to you. But this chapter is where it all pays off: Sobolev functions, BV functions, convex functions --- all the rough objects from earlier --- turn out to be differentiable in various precise senses almost everywhere. And then the punchline: Sobolev functions are ``almost $C^1$.''
+
+\subsection{$L^p$ differentiability}\label{subsec:lp-diff}
+
+The idea is simple. Instead of asking that $f$ be differentiable pointwise, you ask that the Taylor remainder is small \emph{on average} over shrinking balls.
+
+\begin{definition}[$L^p$ differentiability]\label{def:lp-diff}
+Let $f \in L^1_{\mathrm{loc}}(\R^n)$ and $1 \le p \le \infty$. We say $f$ is \emph{$L^p$ differentiable} at $x$ if there exists a linear map $L : \R^n \to \R$ such that
+\[
+    \left( \frac{1}{r^n} \int_{B(x,r)} \abs{f(y) - f(x) - L \cdot (y - x)}^p \dd y \right)^{1/p} = o(r)
+    \quad \text{as } r \to 0.
+\]
+When this holds, $L$ is the $L^p$ derivative of $f$ at $x$.
+\end{definition}
+
+Note the scaling: the left side has units of $f$, and $o(r)$ means the remainder decays faster than linear. Classical differentiability is the $L^\infty$ case, so $L^p$ differentiability is weaker for finite $p$.
+
+\begin{theorem}[$L^{p^*}$ differentiability of $W^{1,p}$ functions]\label{thm:lp-diff-sobolev}
+If $f \in W^{1,p}_{\mathrm{loc}}(\R^n)$ with $1 \le p < n$, then $f$ is $L^{p^*}$ differentiable at $\mathcal{L}^n$-a.e.\ $x$, where $p^* = np/(n-p)$. The $L^{p^*}$ derivative equals $Df(x)$.
+\end{theorem}
+
+The proof uses Morrey's estimate from Chapter 4. You write $f$ as its average plus an integral of the gradient, hit it with Poincar\'e on balls, and Lebesgue differentiation pins down the base point. The exponent $p^*$ is sharp. You don't get $L^q$ for $q > p^*$.
+
+\subsection{Approximate differentiability}\label{subsec:ap-diff}
+
+OK so this is a weird object at first. The approximate derivative says: $f$ looks differentiable if you ignore a set of density zero.
+
+\begin{definition}[Approximate differentiability]\label{def:ap-diff}
+Let $f : \R^n \to \R$.
+\begin{enumerate}
+    \item The \emph{approximate limit} $\ell = \operatorname{ap\,lim}_{y \to x} f(y)$ exists if for every $\varepsilon > 0$,
+    \[
+        \lim_{r \to 0} \frac{\mathcal{L}^n(\{y \in B(x,r) : \abs{f(y) - \ell} \ge \varepsilon\})}{\alpha(n) r^n} = 0.
+    \]
+    The bad set has density zero at $x$.
+
+    \item $f$ is \emph{approximately differentiable} at $x$ if there's a linear $L : \R^n \to \R$ with
+    \[
+        \operatorname{ap\,lim}_{y \to x} \frac{f(y) - f(x) - L \cdot (y - x)}{\abs{y - x}} = 0.
+    \]
+    Write $\operatorname{ap} Df(x) = L$.
+\end{enumerate}
+\end{definition}
+
+You're replacing the ordinary limit with an approximate limit. The set where the difference quotient is large could be nonempty, even uncountable. You just need it to be thin in a density sense.
+
+\begin{theorem}\label{thm:ap-deriv-unique}
+If $f$ is approximately differentiable at $x$, then $\operatorname{ap} Df(x)$ is unique.
+\end{theorem}
+
+\begin{proof}
+Suppose $L_1, L_2$ both work. For each $\varepsilon > 0$, the sets $A_i = \{y : |f(y) - f(x) - L_i(y-x)|/|y-x| \ge \varepsilon\}$ each have density zero at $x$. Their union also has density zero. On $B(x,r) \setminus (A_1 \cup A_2)$ we get $|(L_1 - L_2)(y-x)| \le 2\varepsilon|y-x|$, and this set has density one. Pick directions and send $\varepsilon \to 0$.
+\end{proof}
+
+Now the big result for BV.
+
+\begin{theorem}[BV functions are approximately differentiable a.e.]\label{thm:bv-ap-diff}
+Let $f \in BV_{\mathrm{loc}}(\R^n)$. Then $f$ is approximately differentiable at $\mathcal{L}^n$-a.e.\ $x$, with
+\[
+    \operatorname{ap} Df(x) = \nabla f(x) \quad \mathcal{L}^n\text{-a.e.},
+\]
+where $\nabla f$ is the Radon--Nikod\'ym derivative of $Df$ with respect to $\mathcal{L}^n$.
+\end{theorem}
+
+This is surprisingly strong. BV functions can jump across hypersurfaces, but away from those jumps they're approximately differentiable with the ``expected'' gradient. The jumps form a set of $\mathcal{L}^n$-measure zero and hence density zero. The approximate derivative just ignores them.
+
+\begin{remark}\label{rmk:hierarchy}
+The hierarchy, strongest to weakest:
+\[
+    \text{classically diff.} \implies L^\infty \text{ diff.} \implies L^p \text{ diff.} \implies \text{approx.\ diff.}
+\]
+None of the arrows reverse.
+\end{remark}
+
+
+\section{November 6, 2024}\label{sec:nov6}
+
+Short lecture today. We do the $p > n$ case, Rademacher redux, and convex functions.
+
+\subsection{Differentiability a.e.\ for $W^{1,p}$, $p > n$}\label{subsec:diff-ae}
+
+When $p > n$ you jump all the way to classical differentiability. This is where the Sobolev embedding really pays off.
+
+\begin{theorem}\label{thm:diff-ae-sobolev}
+Let $f \in W^{1,p}_{\mathrm{loc}}(\R^n)$ with $n < p \le \infty$. Then $f$ is differentiable at $\mathcal{L}^n$-a.e.\ $x$, with derivative $Df(x)$.
+\end{theorem}
+
+\begin{proof}
+By Morrey's inequality, for $y \in B(x,r)$:
+\[
+    \abs{f(y) - f(x) - Df(x) \cdot (y-x)} \le C r \left( \frac{1}{r^n} \int_{B(x,r)} \abs{Df(y) - Df(x)}^p \dd y \right)^{1/p}.
+\]
+Lebesgue differentiation applied to $|Df - Df(x)|^p$ gives the right side as $o(r)$ for a.e.\ $x$. That's classical differentiability.
+\end{proof}
+
+Short and clean. Morrey does the heavy lifting.
+
+\begin{theorem}[Rademacher's Theorem --- second proof]\label{thm:rademacher-v2}
+Every locally Lipschitz function $f : \R^n \to \R$ is differentiable $\mathcal{L}^n$-a.e.
+\end{theorem}
+
+\begin{proof}
+Locally Lipschitz implies $f \in W^{1,\infty}_{\mathrm{loc}}(\R^n)$. Since $\infty > n$, apply Theorem~\ref{thm:diff-ae-sobolev}.
+\end{proof}
+
+Two lines. The first proof in Chapter 3 was this painful argument with directional derivatives and Fubini. This proof hides the pain in the Chapter 4 prerequisites, but whatever, it works.
+
+\subsection{Convex functions}\label{subsec:convex}
+
+\begin{theorem}\label{thm:convex-lip}
+Every convex function $f : \R^n \to \R$ is locally Lipschitz.
+\end{theorem}
+
+Convexity is a global geometric condition but it forces local analytic regularity. A convex function can't oscillate too wildly. Combined with Rademacher: every convex function is differentiable a.e. But Aleksandrov goes one derivative further.
+
+\subsection{Aleksandrov's theorem}\label{subsec:aleksandrov}
+
+This result is amazing. A convex function has second derivatives almost everywhere.
+
+\begin{theorem}[Aleksandrov]\label{thm:aleksandrov}
+Let $f : \R^n \to \R$ be convex. For $\mathcal{L}^n$-a.e.\ $x$, there exists a symmetric $D^2 f(x) \in \R^{n \times n}$ with
+\[
+    \lim_{r \to 0} \frac{1}{r^n} \int_{B(x,r)} \frac{\abs{f(y) - f(x) - Df(x) \cdot (y - x) - \frac{1}{2}(y-x)^T D^2 f(x) (y-x)}}{r^2} \dd y = 0.
+\]
+And $D^2 f(x) \ge 0$ a.e.
+\end{theorem}
+
+I mean, think about what this says. The second-order Taylor remainder, averaged over a ball, is $o(r^2)$. Convex functions have a second-order Taylor expansion a.e., and the Hessian is nonneg. That's what you'd expect from convexity, but proving it exists without any smoothness assumption is the hard part.
+
+\begin{proof}[Proof sketch]
+The argument takes all of Evans Section 6.4. Three steps:
+\begin{enumerate}
+    \item $f$ is locally Lipschitz by Theorem~\ref{thm:convex-lip}, so differentiable a.e.\ by Rademacher. The gradient $Df$ is BV (the distributional Hessian is a nonneg.\ matrix-valued Radon measure).
+    \item Decompose $D^2 f$ into ac and singular parts using BV structure.
+    \item The Taylor expansion holds at Lebesgue points of the ac part, which is a.e.
+\end{enumerate}
+The jump from first to second derivatives is the deepest result in the chapter.
+\end{proof}
+
+Look, $f(x) = |x|$ on $\R$ has $f''(x) = 0$ for $x \neq 0$ and isn't twice differentiable at $x = 0$. But that's a single point, measure zero. Aleksandrov says this is always the situation for convex functions.
+
+\subsection{Whitney's extension theorem}\label{subsec:whitney}
+
+\begin{theorem}[Whitney extension]\label{thm:whitney}
+Let $C \subseteq \R^n$ be closed. Suppose $f : C \to \R$ and $d : C \to \R^n$ satisfy the compatibility condition: for every $\varepsilon > 0$ and compact $K \subseteq \R^n$, there exists $\delta > 0$ such that
+\[
+    \abs{f(y) - f(x) - d(x) \cdot (y - x)} \le \varepsilon \abs{y - x}
+\]
+for $x, y \in C \cap K$ with $|x - y| < \delta$.
+
+Then there exists $F \in C^1(\R^n)$ with $F|_C = f$ and $DF|_C = d$.
+\end{theorem}
+
+I won't go through the proof. It's a partition-of-unity construction with Whitney cubes. The point is the statement: if your data $(f, d)$ on $C$ is \emph{consistent} with being a function and its derivative, then an actual $C^1$ extension exists.
+
+\subsection{Approximation by $C^1$ functions}\label{subsec:c1-approx}
+
+Here's the punchline of the entire book.
+
+\begin{theorem}[$C^1$ approximation]\label{thm:c1-approx}
+Let $f \in W^{1,p}(\R^n)$, $1 \le p \le \infty$. For every $\varepsilon > 0$, there's a $g \in C^1(\R^n)$ with
+\[
+    \mathcal{L}^n\!\left(\{x : f(x) \neq g(x) \text{ or } Df(x) \neq Dg(x)\}\right) < \varepsilon.
+\]
+\end{theorem}
+
+Read that again. It's not saying $f$ is close to $g$ in some norm. It's saying $f$ literally \emph{equals} a $C^1$ function except on a set of measure less than $\varepsilon$. The function and its gradient agree with a smooth function outside a tiny exceptional set.
+
+\begin{proof}[Proof sketch]
+Three ingredients, nothing more:
+\begin{enumerate}
+    \item \textbf{Approximate differentiability a.e.} By Theorem~\ref{thm:lp-diff-sobolev} or Theorem~\ref{thm:bv-ap-diff}, $f$ is approximately differentiable a.e.\ with approximate derivative equal to $Df$.
+
+    \item \textbf{Lusin-type extraction.} Egorov's theorem plus the definition of approximate differentiability gives a closed set $C$ with $\mathcal{L}^n(\R^n \setminus C) < \varepsilon$ such that $f|_C$ and $Df|_C$ satisfy Whitney's compatibility condition.
+
+    \item \textbf{Whitney extension.} Apply Theorem~\ref{thm:whitney} to $(f|_C, Df|_C)$ to get $g \in C^1(\R^n)$ with $g = f$ and $Dg = Df$ on $C$.
+\end{enumerate}
+The exceptional set is $\R^n \setminus C$, which has measure $< \varepsilon$.
+\end{proof}
+
+This is a Lusin-type theorem for Sobolev functions. Lusin says a measurable function is continuous outside a small set. This says a Sobolev function is $C^1$ outside a small set.
+
+\begin{remark}\label{rmk:not-mollification}
+This is NOT mollification. Mollification gives $f_\varepsilon \in C^\infty$ with $f_\varepsilon \to f$ in $W^{1,p}$, but $f_\varepsilon \neq f$ everywhere. The $C^1$ approximation theorem gives pointwise equality on a big set. Much stronger, but you only get $C^1$ out, not $C^\infty$.
+\end{remark}
+
+Why does this matter? It gives an intrinsic characterization of Sobolev spaces: $W^{1,p}$ functions are exactly the $L^p$ functions that agree with $C^1$ functions outside sets of small measure, with the right gradient control. It's used in geometric measure theory to transfer smooth results to Sobolev functions. And for PDEs, it sometimes lets you reduce regularity arguments to the $C^1$ case.
+
+Everything in Chapter 6 depends on the hard analysis from Chapters 3--5. The Sobolev embeddings, the BV theory, the fine properties of measures. This is where those investments pay off, and the $C^1$ approximation theorem is the crown jewel.

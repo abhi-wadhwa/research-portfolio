@@ -1,0 +1,390 @@
+% Hausdorff Measure --- Evans & Gariepy, Chapter 2 (pp. 60--78)
+% Lecture notes style, Fall 2024, Mon/Wed schedule
+% \input'd by main.tex
+
+\section{September 16, 2024}\label{sec:lec6}
+
+Brian asked me over lunch what Hausdorff measure even \emph{is}, and my
+attempt to explain it convinced me I didn't understand the definition as
+well as I thought. So let's be careful.
+
+The big idea: Lebesgue measure only ``sees'' $n$-dimensional things in
+$\R^n$. If you want to measure a curve in $\R^3$, or the surface of a
+sphere, or a fractal, you need something that can handle non-integer
+dimensions. That's Hausdorff measure.
+
+\subsection{Hausdorff pre-measure and Hausdorff measure}%
+\label{subsec:hausdorff-def}
+
+We build $\mathcal{H}^s$ in two steps: approximate at scale $\delta$,
+then take a limit.
+
+\begin{definition}[Hausdorff pre-measure]\label{def:hausdorff-premeasure}
+Let $A \subseteq \R^n$, $0 \le s < \infty$, $0 < \delta \le \infty$.
+Define
+\[
+  \mathcal{H}^s_\delta(A)
+  = \inf\!\left\{\, \sum_{j=1}^\infty \alpha(s)
+    \left(\frac{\diam C_j}{2}\right)^{\!s} :
+    A \subseteq \bigcup_{j=1}^\infty C_j,\;
+    \diam C_j \le \delta \,\right\},
+\]
+where $\alpha(s) = \pi^{s/2}/\Gamma(s/2+1)$ is the normalization constant
+chosen so that $\mathcal{H}^n$ agrees with $\mathcal{L}^n$.
+\end{definition}
+
+I keep forgetting the normalization. Writing it down one more time:
+$\alpha(n) = \pi^{n/2}/\Gamma(n/2+1)$. For integer $n$ this is the volume
+of the unit ball in $\R^n$. So $\alpha(1) = 2$, $\alpha(2) = \pi$,
+$\alpha(3) = 4\pi/3$.
+
+\begin{definition}[$s$-dimensional Hausdorff measure]%
+\label{def:hausdorff-measure}
+\[
+  \mathcal{H}^s(A)
+  = \lim_{\delta \to 0^+} \mathcal{H}^s_\delta(A)
+  = \sup_{\delta > 0} \mathcal{H}^s_\delta(A).
+\]
+The limit exists (possibly $= +\infty$) because $\mathcal{H}^s_\delta(A)$
+is non-decreasing as $\delta \to 0$: shrinking $\delta$ restricts the
+admissible covers.
+\end{definition}
+
+So as $\delta$ shrinks, we force covers to use smaller sets, which can
+only make the infimum larger. Clean.
+
+\begin{remark}\label{rem:hausdorff-sanity}
+Some sanity checks:
+\begin{itemize}[nosep]
+  \item $\mathcal{H}^0$ is counting measure.
+        Each nonempty covering set contributes
+        $\alpha(0)(\diam C_j / 2)^0 = 1$.
+  \item $\mathcal{H}^1$ on $\R^1$ agrees with $\mathcal{L}^1$.
+        Not hard but takes a small argument --- intervals are the most
+        efficient covers on the real line.
+  \item $\mathcal{H}^n$ on $\R^n$ agrees with $\mathcal{L}^n$.
+        That's the content of the isodiametric inequality below.
+  \item $\mathcal{H}^s \equiv 0$ on $\R^n$ for $s > n$.
+        Cover by cubes of side $\delta$; each has diameter
+        $\delta\sqrt{n}$. The sum goes to $0$ as $\delta \to 0$ because
+        the exponent $s > n$ beats the count.
+\end{itemize}
+\end{remark}
+
+$\mathcal{H}^s$ is a Borel regular outer measure on $\R^n$. Countable
+subadditivity is straightforward. Borel regularity takes more work
+(Evans, p.\ 62).
+
+
+\subsection{Hausdorff dimension}\label{subsec:hausdorff-dim}
+
+\begin{lemma}[Dimension threshold]\label{lem:dimension-threshold}
+Let $A \subseteq \R^n$.
+\begin{enumerate}[nosep]
+  \item If $\mathcal{H}^s(A) < \infty$, then $\mathcal{H}^t(A) = 0$
+        for all $t > s$.
+  \item If $\mathcal{H}^t(A) > 0$, then $\mathcal{H}^s(A) = +\infty$
+        for all $0 \le s < t$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+For (i): let $\{C_j\}$ be a $\delta$-cover of $A$. Then
+\[
+  \sum_j \alpha(t)\!\left(\frac{\diam C_j}{2}\right)^{\!t}
+  \le \left(\frac{\delta}{2}\right)^{\!t-s}
+  \frac{\alpha(t)}{\alpha(s)}
+  \sum_j \alpha(s)\!\left(\frac{\diam C_j}{2}\right)^{\!s}.
+\]
+Take the infimum: $\mathcal{H}^t_\delta(A) \le C \cdot \delta^{t-s}
+\cdot \mathcal{H}^s_\delta(A)$. Send $\delta \to 0$. The
+$\delta^{t-s}$ factor kills everything since $t - s > 0$ and
+$\mathcal{H}^s(A) < \infty$. Part (ii) is the contrapositive. \qedhere
+\end{proof}
+
+So there's a critical value of $s$ where $\mathcal{H}^s$ jumps from
+$+\infty$ to $0$. That value is the Hausdorff dimension.
+
+\begin{definition}[Hausdorff dimension]\label{def:hausdorff-dim}
+\[
+  \dim_{\mathcal{H}}(A)
+  = \inf\!\bigl\{ s \ge 0 : \mathcal{H}^s(A) = 0 \bigr\}
+  = \sup\!\bigl\{ s \ge 0 : \mathcal{H}^s(A) = +\infty \bigr\}.
+\]
+\end{definition}
+
+At the critical dimension itself, $\mathcal{H}^s(A)$ can be $0$, $\infty$,
+or anything in between. The middle-thirds Cantor set has
+$\dim_\mathcal{H} = \log 2 / \log 3$ and its Hausdorff measure at that
+dimension is $1$. That's special --- most sets aren't so nice.
+
+Some examples:
+\begin{itemize}[nosep]
+  \item Smooth $k$-dimensional submanifolds of $\R^n$:
+        $\dim_\mathcal{H} = k$.
+  \item Middle-thirds Cantor set:
+        $\dim_\mathcal{H} = \log 2 / \log 3 \approx 0.631$.
+  \item Countable sets: $\dim_\mathcal{H} = 0$.
+  \item $\R^n$: $\dim_\mathcal{H} = n$. Obviously.
+\end{itemize}
+
+I tried computing $\mathcal{H}^{\log 2/\log 3}$ of the Cantor set
+directly but got confused by the covering argument. The upper bound is
+easy (use the $2^k$ remaining intervals at level $k$), but the lower bound
+needs more care --- you have to show those ``natural'' covers are actually
+optimal. I don't really get the intuition yet.
+
+TODO: work through the Cantor set dimension calculation carefully. Check
+Rogers's book for the density argument.
+
+
+% ===========================================================================
+\section{September 18, 2024}\label{sec:lec7}
+
+The highlight of this chapter. The isodiametric inequality via Steiner
+symmetrization is one of the cleanest proofs I've seen all semester. I
+didn't see it coming at all.
+
+\subsection{Steiner symmetrization}\label{subsec:steiner}
+
+\begin{definition}[Steiner symmetrization]\label{def:steiner}
+Let $A \subseteq \R^n$ be Borel and $a \in S^{n-1}$ a unit vector. The
+\emph{Steiner symmetrization} of $A$ with respect to the hyperplane
+$\{x : x \cdot a = 0\}$ is obtained by replacing, for each line parallel
+to $a$, the intersection of that line with $A$ by a symmetric interval of
+the same length centered on the hyperplane.
+
+Precisely: decompose $x = y + ta$ where $y \perp a$, $t \in \R$. For
+each $y$, let $A_y = \{t : y + ta \in A\}$. Then
+\[
+  S_a(A) = \bigl\{\, y + ta : y \perp a,\;
+    |t| \le \tfrac{1}{2}\mathcal{L}^1(A_y) \,\bigr\}.
+\]
+\end{definition}
+
+Picture: you slide each vertical ``slice'' of $A$ so it's centered on the
+hyperplane. Each slice keeps its length, so volume is preserved.
+But the set gets ``rounder,'' so the diameter can only shrink. That's the
+whole game.
+
+\begin{lemma}\label{lem:steiner-props}
+Let $A \subseteq \R^n$ be Borel.
+\begin{enumerate}[nosep]
+  \item $\diam\, S_a(A) \le \diam\, A$.
+  \item $\mathcal{L}^n(S_a(A)) = \mathcal{L}^n(A)$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+Part (ii) is immediate from Fubini: each slice $A_y$ gets replaced by an
+interval of the same $\mathcal{L}^1$-measure. Integrate over $y$.
+
+Part (i) is the interesting one. Take $y_1 + t_1 a$ and $y_2 + t_2 a$
+in $S_a(A)$. We need their distance $\le \diam A$. By the symmetrization
+construction, there exist $s_1, s_2$ with $y_1 + s_1 a \in A$ and
+$y_2 + s_2 a \in A$, and you can choose them so that
+$|s_1 - s_2| \ge |t_1 - t_2|$ (because the original slices are at least
+as long as the symmetrized intervals, so you can pick points that are at
+least as far apart in the $a$-direction). Then:
+\[
+  |{(y_1 + t_1 a) - (y_2 + t_2 a)}|^2
+  = |y_1 - y_2|^2 + (t_1 - t_2)^2
+  \le |y_1 - y_2|^2 + (s_1 - s_2)^2
+  \le (\diam A)^2.
+\]
+The point is that centering the intervals can only bring points in the
+$a$-direction closer together. \qedhere
+\end{proof}
+
+
+\subsection{The isodiametric inequality}\label{subsec:isodiametric}
+
+\begin{theorem}[Isodiametric inequality]\label{thm:isodiametric}
+For any Borel set $A \subseteq \R^n$,
+\[
+  \mathcal{L}^n(A) \le \alpha(n)
+    \left(\frac{\diam\, A}{2}\right)^{\!n}.
+\]
+Among all sets of a given diameter, the ball has the largest volume.
+\end{theorem}
+
+\begin{proof}
+We can assume $\diam A < \infty$ (otherwise the right side is $+\infty$).
+
+\textbf{Step 1: Successive symmetrization.} Let $e_1, \ldots, e_n$ be the
+standard basis. Set $A_0 = A$ and $A_k = S_{e_k}(A_{k-1})$ for
+$k = 1, \ldots, n$. By Lemma~\ref{lem:steiner-props}:
+\[
+  \mathcal{L}^n(A_n) = \mathcal{L}^n(A), \qquad
+  \diam A_n \le \diam A.
+\]
+And $A_n$ is symmetric about the origin --- symmetric with respect to each
+coordinate hyperplane.
+
+\textbf{Step 2.} Since $A_n$ is origin-symmetric, for every $x \in A_n$
+we have $-x \in A_n$. So
+\[
+  2|x| = |x - (-x)| \le \diam A_n \le \diam A.
+\]
+This gives $A_n \subseteq B(0, \diam A/2)$.
+
+\textbf{Step 3.}
+\[
+  \mathcal{L}^n(A) = \mathcal{L}^n(A_n)
+  \le \mathcal{L}^n\!\bigl(B(0, \diam A/2)\bigr)
+  = \alpha(n)\!\left(\frac{\diam A}{2}\right)^{\!n}. \qedhere
+\]
+\end{proof}
+
+Symmetrize along each axis. The set becomes origin-symmetric without
+changing volume or increasing diameter, so it fits in a ball of radius
+$\diam/2$. Really clean.
+
+\begin{remark}\label{rem:isodiametric-extends}
+The theorem extends to Lebesgue measurable sets and even arbitrary sets
+(via outer regularity --- every set sits inside a Borel set of the same
+outer measure).
+\end{remark}
+
+
+\subsection{$\mathcal{H}^n = \mathcal{L}^n$}\label{subsec:Hn-Ln}
+
+This is what all the machinery was for.
+
+\begin{theorem}\label{thm:Hn-equals-Ln}
+On $\R^n$, $\mathcal{H}^n = \mathcal{L}^n$.
+\end{theorem}
+
+\begin{proof}
+Two inequalities.
+
+\emph{$\mathcal{H}^n \ge \mathcal{L}^n$:} Let $\{C_j\}$ be any covering
+of $A$ with $\diam C_j \le \delta$. By the isodiametric inequality,
+\[
+  \mathcal{L}^n(A) \le \sum_j \mathcal{L}^n(C_j)
+  \le \sum_j \alpha(n)\!\left(\frac{\diam C_j}{2}\right)^{\!n}.
+\]
+Take the infimum over covers:
+$\mathcal{L}^n(A) \le \mathcal{H}^n_\delta(A)$ for all $\delta$, so
+$\mathcal{L}^n(A) \le \mathcal{H}^n(A)$.
+
+\emph{$\mathcal{H}^n \le \mathcal{L}^n$:} Cover $A$ by cubes of side
+$\delta/\sqrt{n}$ (so diameter $\le \delta$). The sum
+$\sum_j \alpha(n)(\diam C_j/2)^n$ is at most $\mathcal{L}^n(A) +
+\varepsilon$ if you choose the cover carefully using the definition of
+Lebesgue outer measure. Send $\varepsilon \to 0$:
+$\mathcal{H}^n_\delta(A) \le \mathcal{L}^n(A)$, so
+$\mathcal{H}^n(A) \le \mathcal{L}^n(A)$.
+
+The isodiametric inequality does the heavy lifting in the first direction.
+The second direction is basically just checking the normalization works
+out. \qedhere
+\end{proof}
+
+Brian and I spent a whole afternoon on why $\mathcal{H}^n = \mathcal{L}^n$
+isn't obvious. The short answer: ``cover by balls'' and ``cover by
+arbitrary sets'' give the same outer measure only after you prove a
+non-trivial geometric inequality. That's the isodiametric inequality.
+Without it you're stuck.
+
+
+\subsection{Densities}\label{subsec:densities}
+
+\begin{definition}[Upper and lower $s$-dimensional densities]%
+\label{def:densities}
+Let $\mu = \mathcal{H}^s \mres A$. For $x \in \R^n$, define
+\begin{align*}
+  \Theta^{*s}(\mu, x)
+    &= \limsup_{r \to 0^+} \frac{\mu(B(x,r))}{\alpha(s)\, r^s}, \\
+  \Theta_*^{\,s}(\mu, x)
+    &= \liminf_{r \to 0^+} \frac{\mu(B(x,r))}{\alpha(s)\, r^s}.
+\end{align*}
+When the limit exists,
+$\Theta^s(\mu, x) = \Theta^{*s}(\mu, x) = \Theta_*^{\,s}(\mu, x)$ is
+the \emph{$s$-dimensional density} of $\mu$ at $x$.
+\end{definition}
+
+The density measures how uniformly $s$-dimensional a set looks at small
+scales near $x$. If $A$ is a smooth $k$-dimensional submanifold, then
+$\Theta^k(\mathcal{H}^k \mres A, x) = 1$ at every $x \in A$ --- locally
+the set looks like a flat $k$-plane, filling the ball at the same rate as
+$\R^k$. That's the clean case.
+
+\begin{theorem}[Density bounds]\label{thm:density-bounds}
+Let $A \subseteq \R^n$ with $\mathcal{H}^s(A) < \infty$. Then:
+\begin{enumerate}[nosep]
+  \item $\Theta^{*s}(\mathcal{H}^s \mres A,\, x) = 0$ for
+        $\mathcal{H}^s$-a.e.\ $x \notin A$.
+  \item $2^{-s} \le \Theta^{*s}(\mathcal{H}^s \mres A,\, x) \le 1$ for
+        $\mathcal{H}^s$-a.e.\ $x \in A$.
+\end{enumerate}
+\end{theorem}
+
+The upper bound $\Theta^{*s} \le 1$ is the easier direction --- it's
+basically a covering argument using the definition of $\mathcal{H}^s$.
+The lower bound $2^{-s} \le \Theta^{*s}$ is harder and relies on a
+Vitali-type covering lemma for Hausdorff measure.
+
+\begin{remark}\label{rem:density-integer}
+For integer $s = n$ everything is nicer. The $n$-dimensional density of
+$\mathcal{L}^n$-measurable sets equals $1$ a.e.\ on the set and $0$
+a.e.\ off it --- that's the Lebesgue density theorem. For non-integer $s$
+the density may not exist at all, and the gap between $2^{-s}$ and $1$ is
+genuine. Sets with non-integer Hausdorff dimension don't have clean local
+structure. This definition felt arbitrary until I saw how it shows up in
+rectifiability later.
+\end{remark}
+
+TODO: understand the proof of the lower bound $2^{-s}$ better. Evans uses
+a covering argument (pp.\ 72--73) that I need to go through line by line.
+
+
+\subsection{Connection to functions}\label{subsec:functions}
+
+The last bit connects Hausdorff measure back to the ``fine properties''
+theme of the book. The main tool is Fubini applied to subgraphs.
+
+\begin{definition}[Subgraph]\label{def:subgraph}
+For $f \colon \R^n \to [0, \infty]$ measurable, the \emph{subgraph} is
+\[
+  \operatorname{SG}(f) = \bigl\{\, (x, t) \in \R^n \times \R :
+    0 \le t \le f(x) \,\bigr\} \subseteq \R^{n+1}.
+\]
+\end{definition}
+
+\begin{lemma}\label{lem:subgraph-measurable}
+If $f \colon \R^n \to [0,\infty]$ is $\mathcal{L}^n$-measurable, then
+$\operatorname{SG}(f)$ is $\mathcal{L}^{n+1}$-measurable and
+\[
+  \mathcal{L}^{n+1}\!\bigl(\operatorname{SG}(f)\bigr)
+  = \int_{\R^n} f \dd\mathcal{L}^n.
+\]
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+By Fubini:
+$\mathcal{L}^{n+1}(\operatorname{SG}(f))
+= \int_{\R^n} \mathcal{L}^1(\{t : 0 \le t \le f(x)\})
+\dd\mathcal{L}^n(x)
+= \int_{\R^n} f(x) \dd\mathcal{L}^n(x)$.
+The measurability of $\operatorname{SG}(f)$ as a subset of $\R^{n+1}$
+follows from approximation by simple functions. \qedhere
+\end{proof}
+
+One of those lemmas that feels obvious but needs Fubini to make honest.
+The point for later: you can study integrability, level sets, and
+regularity of a function by looking at its subgraph as a subset of
+$\R^{n+1}$ and applying Hausdorff measure tools. The Cavalieri principle
+--- $\int f = \int_0^\infty \mathcal{L}^n(\{f > t\})\dd t$ --- is a close
+relative.
+
+\bigskip
+
+That's Chapter~2. We've got Hausdorff measure, Hausdorff dimension, the
+isodiametric inequality via Steiner symmetrization, the proof that
+$\mathcal{H}^n = \mathcal{L}^n$, density results, and the subgraph
+connection. The isodiametric inequality proof is the gem. The rest is
+careful bookkeeping with covers and limits.
+
+TODO: read Evans Section~2.4 more carefully for measurability details.
+Revisit the Vitali covering argument in the density lower bound.

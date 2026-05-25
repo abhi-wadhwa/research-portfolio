@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# LaTeX build artifacts
+**/paper/*.aux
+**/paper/*.log
+**/paper/*.out
+**/paper/*.toc
+**/paper/*.bbl
+**/paper/*.blg

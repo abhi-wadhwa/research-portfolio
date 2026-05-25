@@ -1,0 +1,8 @@
+numpy>=1.24
+matplotlib>=3.7
+seaborn>=0.12
+scipy>=1.10
+
+# Lean 4 formalization requires:
+# - elan (Lean version manager): curl https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -sSf | sh
+# - Mathlib (fetched automatically by `lake build` in the lean/ directory)

@@ -1,0 +1,110 @@
+% Measure Theory and Fine Properties of Functions
+% Notes based on Evans & Gariepy (1992)
+% Abhi Wadhwa, USC, Fall 2024
+
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb,amsfonts}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+% --- Page style (Evan Chen style) ---
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Abhi Wadhwa}
+\rhead{Measure Theory, USC}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% --- Theorem environments (numbered within section) ---
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conjecture}[theorem]{Conjecture}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{problem}[theorem]{Problem}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% --- Notation ---
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\abs}[1]{\left|#1\right|}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\dd}{\,\mathrm{d}}
+
+% Hausdorff and Lebesgue
+\newcommand{\Hn}{\mathcal{H}^n}
+\newcommand{\Ln}{\mathcal{L}^n}
+\newcommand{\Lm}{\mathcal{L}^m}
+\newcommand{\Lip}{\operatorname{Lip}}
+\newcommand{\spt}{\operatorname{spt}}
+\newcommand{\diam}{\operatorname{diam}}
+\newcommand{\range}{\operatorname{range}}
+
+% Measure restriction
+\newcommand{\mres}{\mathbin{\vrule height 1.6ex depth 0pt width 0.13ex\vrule height 0.13ex depth 0pt width 0.6em}}
+
+% Average integral
+\DeclareMathOperator{\fint}{\mathchoice
+  {\,\rlap{\raise.2ex\hbox{$\displaystyle{-}$}}\!\int}
+  {\,\rlap{\raise.2ex\hbox{$\textstyle{-}$}}\!\int}
+  {\,\rlap{\raise.1ex\hbox{$\scriptstyle{-}$}}\!\int}
+  {\,\rlap{\raise.1ex\hbox{$\scriptscriptstyle{-}$}}\!\int}}
+
+\graphicspath{{../code/figures/}}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=green!50!black,
+  urlcolor=blue!60!black
+}
+
+% ===========================================================================
+
+\title{\textbf{Measure Theory and Fine Properties of Functions}}
+\author{Abhi Wadhwa\\ \small University of Southern California}
+\date{Notes for an independent study based on Evans \& Gariepy, Fall 2024.}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+\input{ch1}
+\input{ch2}
+\input{ch3}
+\input{ch4}
+\input{ch5}
+\input{ch6}
+
+\bigskip
+\noindent\textbf{Acknowledgments.}
+Thanks to Brian Fan for working through most of this with me.
+
+\end{document}

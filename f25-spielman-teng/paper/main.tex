@@ -1,0 +1,607 @@
+\documentclass[11pt]{article}
+
+% ---------------------------------------------------------------------------
+% Packages
+% ---------------------------------------------------------------------------
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage{graphicx}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{xcolor}
+
+\graphicspath{{../code/figures/}}
+
+% ---------------------------------------------------------------------------
+% Theorem environments
+% ---------------------------------------------------------------------------
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% ---------------------------------------------------------------------------
+% Macros
+% ---------------------------------------------------------------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\sigmamin}{\sigma_{\min}}
+\newcommand{\sigmamax}{\sigma_{\max}}
+
+% ---------------------------------------------------------------------------
+% Title
+% ---------------------------------------------------------------------------
+\title{Notes on the Resolution of the Spielman--Teng Conjecture}
+\author{Abhi Wadhwa\\
+\textit{University of Southern California}}
+\date{Fall 2025}
+
+\begin{document}
+\maketitle
+
+% ===================================================================
+% ABSTRACT
+% ===================================================================
+\begin{abstract}
+The Spielman--Teng conjecture predicted that for an $n \times n$ random matrix $M$
+with iid subgaussian entries, $\Prob(\sigma_n(M) \le \varepsilon n^{-1/2}) \le C\varepsilon + e^{-cn}$.
+The best prior results left a gap: the constant $C$ couldn't be pushed to~$1$.
+In 2024, Sah, Sahasrabudhe, and Sawhney proved the conjecture up to a $1 + o(1)$ factor,
+showing $\Prob(\sigma_n(M) \le \varepsilon n^{-1/2}) \le (1+o(1))\varepsilon + e^{-\Omega(n)}$.
+These notes walk through their proof architecture and verify the bound computationally.
+\end{abstract}
+
+% ===================================================================
+% 1. INTRODUCTION
+% ===================================================================
+\section{Introduction}
+\label{sec:intro}
+
+I first encountered the Spielman--Teng conjecture in Zixiang's office hours, scribbled
+on the corner of a whiteboard that hadn't been fully erased. He was talking about smoothed
+analysis and why the simplex method works so well in practice. The question on the board
+was about the smallest singular value of a random matrix. How small can it be?
+
+The answer, it turns out, has a long history. For an $n \times n$ matrix $A$, the condition
+number
+\[
+  \kappa(A) = \frac{\sigmamax(A)}{\sigmamin(A)}
+\]
+governs everything from the stability of linear solvers to convergence rates of
+iterative methods. Worst-case condition numbers can be absurd. The $50 \times 50$
+Hilbert matrix has $\kappa(H_{50}) > 10^{17}$. But in practice, matrices that arise
+from real data or random perturbations of structured inputs behave far better.
+
+Spielman and Teng~\cite{spielman2004smoothed} formalized this intuition with smoothed
+analysis, which asks: given an adversarially chosen matrix $M$ and a small random
+perturbation $\sigma G$, how large is $\E[\kappa(M + \sigma G)]$? They conjectured
+the answer is $O(n/\sigma)$, regardless of the base matrix $M$. The conjecture
+sat open for nearly two decades. Partial progress came from Sankar, Spielman, and
+Teng~\cite{sankar2006smoothed}, who proved $O(n^{3/2}/\sigma)$, and from Tao and
+Vu~\cite{tao2008condition}, who got $O(n/\sigma)$ with logarithmic losses.
+
+But the question that mattered more, at least from a random matrix theory perspective,
+was sharper. Forget smoothed analysis for a moment. Take $M$ to be a random matrix with
+iid entries. What's the probability that its least singular value $\sigma_n(M)$ is
+tiny?
+
+Edelman~\cite{edelman1988eigenvalues} answered this exactly for Gaussian matrices in 1988.
+The rescaled quantity $n \cdot \sigma_n(M)$ converges in distribution to a random variable
+with density
+\begin{equation}
+  \label{eq:edelman-density}
+  f(x) = (x + 1) e^{-x^2/2 - x}, \quad x \ge 0.
+\end{equation}
+This gives $\Prob(\sigma_n(G) \le \varepsilon n^{-1/2}) \approx \varepsilon$ for
+small $\varepsilon$, where $G$ is Gaussian.
+
+For non-Gaussian entries, Rudelson and Vershynin~\cite{rudelson2008littlewood,rudelson2009smallest}
+proved the bound
+\begin{equation}
+  \label{eq:rv-bound}
+  \Prob\!\left(\sigma_n(M) \le \frac{\varepsilon}{\sqrt{n}}\right) \le C\varepsilon + e^{-cn},
+\end{equation}
+where $C > 1$ is an absolute constant. Tao and Vu~\cite{tao2010random} improved
+this to $C = 1$ for $\varepsilon \ge n^{-c}$, but the full range remained out of reach.
+Tikhomirov~\cite{tikhomirov2020singularity} made a breakthrough of a different kind,
+proving that the singularity probability of a random Rademacher ($\pm 1$) matrix is
+exactly $2^{-n + o(n)}$.
+
+The Spielman--Teng conjecture, in its sharpest form, asked for $C = 1$. Sah, Sahasrabudhe,
+and Sawhney~\cite{sah2024spielman} proved it, up to a $1 + o(1)$ factor. That's what these
+notes are about.
+
+The paper is organized as follows. Section~\ref{sec:prelim} collects definitions and
+tools. Section~\ref{sec:main-result} states the main theorems. Section~\ref{sec:proof-arch}
+walks through the four-step proof, which is the heart of these notes. Section~\ref{sec:experiments}
+describes Monte Carlo experiments that verify the bound empirically.
+Section~\ref{sec:discussion} discusses what's left.
+
+% ===================================================================
+% 2. PRELIMINARIES
+% ===================================================================
+\section{Preliminaries}
+\label{sec:prelim}
+
+\subsection{Subgaussian Random Variables}
+
+\begin{definition}
+A centered random variable $\xi$ is \emph{subgaussian} with parameter $K$ if
+$\E[e^{t\xi}] \le e^{K^2 t^2 / 2}$ for all $t \in \R$. The subgaussian norm is
+$\|\xi\|_{\psi_2} = \inf\{K > 0 : \E[e^{\xi^2/K^2}] \le 2\}$.
+\end{definition}
+
+Standard Gaussians are subgaussian. So are Rademacher random variables ($\pm 1$
+with equal probability), bounded random variables, and more generally any random
+variable whose tails decay at least as fast as a Gaussian's. A detailed treatment
+is in Vershynin~\cite{vershynin2018high}, Chapters 2--3.
+
+\subsection{Singular Values}
+
+For an $n \times n$ matrix $M$, the singular values $\sigma_1(M) \ge \sigma_2(M) \ge
+\cdots \ge \sigma_n(M) \ge 0$ are the eigenvalues of $(M^* M)^{1/2}$. The least
+singular value $\sigma_n(M)$ equals the distance from $M$ to the set of
+singular matrices:
+\[
+  \sigma_n(M) = \min_{\|x\| = 1} \|Mx\| = \inf\{t \ge 0 : M - tI \text{ is singular for some rotation}\}.
+\]
+When $M$ has iid entries of mean~0 and variance~$1/n$, the global distribution of
+singular values follows the Mar\v{c}enko--Pastur law~\cite{marchenko1967distribution}.
+The edge behavior---the largest and smallest singular values---is more delicate.
+
+\subsection{Covering Numbers and $\varepsilon$-Nets}
+
+A standard tool in the analysis of random matrices is the $\varepsilon$-net argument.
+An $\varepsilon$-net of the unit sphere $S^{n-1}$ is a finite set $\mathcal{N}$ such
+that every point in $S^{n-1}$ lies within distance $\varepsilon$ of some point in
+$\mathcal{N}$. The covering number $\mathcal{N}(S^{n-1}, \varepsilon)$ satisfies
+\[
+  \left(\frac{1}{\varepsilon}\right)^n \le \mathcal{N}(S^{n-1}, \varepsilon)
+  \le \left(\frac{2}{\varepsilon} + 1\right)^n.
+\]
+This lets you discretize the unit sphere and reduce continuous optimization
+problems (like bounding $\sigma_n(M)$) to finite union bounds. See
+Vershynin~\cite{vershynin2018high}, Chapter~4.
+
+% ===================================================================
+% 3. THE MAIN RESULT
+% ===================================================================
+\section{The Main Result}
+\label{sec:main-result}
+
+Let $M$ be an $n \times n$ matrix with iid entries drawn from a subgaussian distribution
+$\xi$ with mean~$0$ and variance~$1$. The main result of Sah, Sahasrabudhe, and
+Sawhney~\cite{sah2024spielman} is:
+
+\begin{theorem}[Sah--Sahasrabudhe--Sawhney, Theorem 1.1]
+\label{thm:sss-main}
+For all $\varepsilon \ge 0$,
+\begin{equation}
+  \label{eq:sss-main}
+  \Prob\!\left(\sigma_n(M) \le \frac{\varepsilon}{\sqrt{n}}\right)
+  \le (1 + o(1))\varepsilon + e^{-\Omega_\xi(n)},
+\end{equation}
+where $o(1)$ decays as $C_\xi (\log n)^{-1/16}$.
+\end{theorem}
+
+The implied constant in $\Omega_\xi(n)$ and the constant $C_\xi$ depend on the
+subgaussian norm of the entry distribution $\xi$, but not on $\varepsilon$ or on
+the specific distribution beyond its first two moments and subgaussian parameter.
+
+The result also establishes universality:
+
+\begin{theorem}[Sah--Sahasrabudhe--Sawhney, Theorem 1.2]
+\label{thm:sss-universality}
+Let $G$ be an $n \times n$ matrix with iid $N(0,1)$ entries. Then
+\begin{equation}
+  \label{eq:sss-universality}
+  \Prob\!\left(\sigma_n(M) \le \frac{\varepsilon}{\sqrt{n}}\right)
+  = (1 + o(1))\,\Prob\!\left(\sigma_n(G) \le \frac{\varepsilon}{\sqrt{n}}\right)
+  + e^{-\Omega_\xi(n)}.
+\end{equation}
+\end{theorem}
+
+Since the Gaussian case is known exactly via Edelman's density, this
+gives:
+
+\begin{corollary}[Corollary 1.3]
+\label{cor:sss}
+For $0 \le \varepsilon \ll 1$,
+\begin{equation}
+  \label{eq:sss-corollary}
+  \Prob\!\left(\sigma_n(M) \le \frac{\varepsilon}{\sqrt{n}}\right)
+  = (1 + o(1))\varepsilon + e^{-\Omega_\xi(n)}.
+\end{equation}
+\end{corollary}
+
+\begin{remark}
+The $o(1)$ term decaying as $(\log n)^{-1/16}$ is probably not optimal.
+Sah, Sahasrabudhe, and Sawhney note that their argument loses a logarithmic factor
+at the truncation step (Section~\ref{sec:truncation}), and improving the exponent $-1/16$
+would require tighter control on the regularity events. Whether the $o(1)$ can be
+removed entirely---giving $C = 1$ on the nose---remains open.
+\end{remark}
+
+% ===================================================================
+% 4. PROOF ARCHITECTURE
+% ===================================================================
+\section{Proof Architecture}
+\label{sec:proof-arch}
+
+The proof of Theorem~\ref{thm:sss-main} proceeds in four steps. I'll walk
+through each one, focusing on the ideas rather than the technical details.
+The full argument spans Sections 3--9 of~\cite{sah2024spielman}.
+
+\subsection{Step 1: Geometric Reduction}
+\label{sec:geometric}
+
+Write $M = \begin{pmatrix} M^* \\ X^T \end{pmatrix}$, where $M^*$ is the
+$(n-1) \times n$ matrix consisting of the first $n-1$ rows and $X \in \R^n$
+is the last row. The key observation is a rank-1 update formula that connects
+$\sigma_n(M)$ to the geometry of $X$ relative to $M^*$.
+
+\begin{lemma}[Rank-1 update, Lemma 3.2 of~\cite{sah2024spielman}]
+\label{lem:rank1}
+Let $v \in \ker(M^*)$ be a unit vector (assuming $M^*$ has rank $n-1$, which
+happens with high probability). Let $u_1, \ldots, u_{n-1}$ be right singular
+vectors of $M^*$ with corresponding singular values $\sigma_1(M^*) \ge \cdots
+\ge \sigma_{n-1}(M^*)$. Then
+\[
+  \sigma_n(M)^2 = \frac{|\langle v, X \rangle|^2}{1 + \sum_{i=1}^{n-1}
+  \frac{\langle u_i, X \rangle^2}{\sigma_i(M^*)^2}}.
+\]
+\end{lemma}
+
+The denominator is essentially $\tilde{\chi}(X)^2$, a weighted sum that measures
+how much $X$ correlates with the singular directions of $M^*$, weighted inversely
+by the corresponding singular values. So $\sigma_n(M) \le \varepsilon n^{-1/2}$
+translates to
+\[
+  |\langle v, X \rangle| \le (1 + \varepsilon^{1/4}) \varepsilon n^{-1/2} \tilde{\chi}(X).
+\]
+This is a geometric statement: the projection of the last row onto the kernel of $M^*$
+is small relative to a chi-type statistic.
+
+The power of this reduction is that it separates the randomness of $X$ from the
+randomness of $M^*$. Conditional on $M^*$, the vector $v$ and the singular structure
+are fixed, and we just need to control $|\langle v, X \rangle|$ relative to
+$\tilde{\chi}(X)$. This is an anti-concentration problem.
+
+\subsection{Step 2: Truncation}
+\label{sec:truncation}
+
+The chi-type statistic $\tilde{\chi}(X)$ involves all $n-1$ singular directions of $M^*$.
+The small singular values create large terms in the sum, and these are hard to control.
+The idea is to truncate: replace $\tilde{\chi}$ with a truncated version $\chi$ that
+only sums over the $\ell = \sqrt{\log n}$ smallest singular directions.
+
+\begin{definition}
+Define the truncated chi statistic
+\[
+  \chi(X)^2 = 1 + \sum_{i=n-\ell}^{n-1} \frac{\langle u_i, X \rangle^2}{\sigma_i(M^*)^2},
+\]
+where $\ell = \lfloor \sqrt{\log n} \rfloor$.
+\end{definition}
+
+The truncation introduces an error, and controlling this error requires a \emph{regularity
+event} $R = R_1 \cap R_2 \cap R_3 \cap R_4$ that constrains the singular value behavior
+of $M^*$. The four sub-events are:
+\begin{itemize}
+  \item $R_1$: $\sigma_{n-1}(M^*) \ge (\log n)^{-3} n^{-1/2}$. The second-to-last
+    singular value isn't too small.
+  \item $R_2$: For all $k$, $|\langle v_{n-k}, X \rangle| \le \max\{k^{1/8}, \log\log n\}$
+    and $\sigma_{n-k}(M^*) \ge k^{3/4} n^{-1/2}$. The projections and singular values
+    are well-behaved at all scales.
+  \item $R_3, R_4$: Technical control on the $(\log\log n)^2$ scale, ensuring that
+    the truncated chi doesn't deviate too much from the full chi.
+\end{itemize}
+
+Sah, Sahasrabudhe, and Sawhney show (Sections 4--7 of~\cite{sah2024spielman}) that
+\begin{equation}
+  \label{eq:truncation}
+  \Prob\!\left(\sigma_n(M) \le \frac{\varepsilon}{\sqrt{n}} \text{ and } R^c\right)
+  = O(\delta_n \varepsilon),
+\end{equation}
+where $\delta_n = (\log n)^{-c}$ for some constant $c > 0$. In other words, the
+``bad'' event where regularity fails and the singular value is small contributes
+only $o(\varepsilon)$ to the probability.
+
+The proofs of these regularity estimates are the longest part of the paper. They
+require careful bounds on the singular value gaps of $(n-1) \times n$ random
+matrices. The key input is a bound on $\sigma_{n-k}(M^*)$ that gives
+polynomial-in-$k$ growth away from the edge. Getting this right is where the
+$(\log n)^{-1/16}$ loss comes from. The exponent $-1/16$ arises from
+balancing several error terms against each other: truncation level $\ell$,
+regularity failure probability, and the approximation quality in the Lindeberg
+step.
+
+\subsection{Step 3: Gaussian Replacement}
+\label{sec:gaussian-replacement}
+
+This is the conceptual core. On the regularity event $R$, we've reduced to controlling
+\[
+  \Prob_X\!\left(|\langle v, X \rangle| \le (1 + \delta_n)\varepsilon n^{-1/2} \chi(X)\right).
+\]
+The truncated chi $\chi(X)$ depends on $X$ through only $\ell = \sqrt{\log n}$
+projections, and the regularity event ensures these projections are well-controlled.
+The goal is to replace $X$ with a Gaussian vector $Z$ and show the probabilities
+are close.
+
+The tool is Lindeberg exchange. Replace the entries of $X$ one at a time with
+Gaussian entries. At each step, the change in probability is controlled by a
+Taylor expansion. The truncation to $\ell$ directions is what makes this work:
+the function we're bounding the probability of depends on $X$ through $\langle v, X \rangle$
+and $\ell$ other projections, and these projections change by at most $O(1)$ at
+each replacement step.
+
+Sah, Sahasrabudhe, and Sawhney use ``negative correlation inequalities'' from
+Campos, Jenssen, Michelen, and Sahasrabudhe~\cite{campos2023negative}. These
+inequalities control the anti-concentration of linear forms in random variables
+that may be weakly correlated. The result (Section 8 of~\cite{sah2024spielman}) is:
+\begin{equation}
+  \label{eq:lindeberg}
+  \Prob_X\!\left(|\langle v, X \rangle| \le (1 + \delta_n)\varepsilon n^{-1/2} \chi(X)\right)
+  \le \Prob_Z\!\left(|\langle v, Z \rangle| \le (1 + 2\delta_n)\varepsilon n^{-1/2} \chi(Z)\right)
+  + o(\varepsilon).
+\end{equation}
+The Gaussian case on the right is now tractable: $\langle v, Z \rangle$ is a standard
+Gaussian (since $v$ is a unit vector and $Z$ has iid $N(0,1)$ entries), and $\chi(Z)$
+is a chi-type random variable that's independent of $\langle v, Z \rangle$ when
+conditioned on $M^*$.
+
+A subtlety. The Lindeberg exchange doesn't work directly on the original (untruncated)
+chi statistic $\tilde{\chi}$, because the full sum involves all $n-1$ singular
+directions and the error from each replacement step doesn't decay fast enough. The
+truncation to $\ell = \sqrt{\log n}$ directions is precisely what makes the total
+Lindeberg error $o(\varepsilon)$.
+
+\subsection{Step 4: Rescaling and Universality}
+\label{sec:rescaling}
+
+After Gaussian replacement, we have a bound in terms of the Gaussian singular value
+probability. The final step passes from the truncated-chi formulation back to a
+singular value statement.
+
+Set $\varepsilon_0 = n^{-c'}$ for a small constant $c'$. On the Gaussian side,
+Tao--Vu universality for row replacement gives
+\[
+  \Prob\!\left(\sigma_n(\tilde{M}) \le \frac{\varepsilon_0}{\sqrt{n}}\right) + o(\varepsilon),
+\]
+where $\tilde{M}$ is the matrix $M$ with its last row replaced by a Gaussian row.
+Since $\sigma_n(G)$ has the Edelman distribution (which is universal for the
+$n^{-1/2}$-scale behavior), this yields
+\[
+  \Prob\!\left(\sigma_n(M) \le \frac{\varepsilon}{\sqrt{n}}\right)
+  \le (1 + o(1))\,\Prob\!\left(\sigma_n(G) \le \frac{\varepsilon}{\sqrt{n}}\right)
+  + e^{-\Omega(n)}.
+\]
+Plugging in $\Prob(\sigma_n(G) \le \varepsilon n^{-1/2}) \le \varepsilon$
+(from Edelman) gives the main bound.
+
+The rescaling step also yields Theorem~\ref{thm:sss-universality} directly: the
+subgaussian probability is $(1 + o(1))$ times the Gaussian probability, so the
+least singular value distribution is universal up to the $o(1)$ factor.
+
+\subsection{Summary of the Architecture}
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Proof outline:}
+\begin{enumerate}
+  \item \textbf{Geometric reduction.} Use rank-1 update to reduce $\sigma_n(M)
+    \le \varepsilon n^{-1/2}$ to an anti-concentration statement about
+    $|\langle v, X \rangle|$ relative to $\tilde{\chi}(X)$.
+  \item \textbf{Truncation.} Replace $\tilde{\chi}$ with truncated $\chi$
+    (summing over $\sqrt{\log n}$ smallest directions). On a high-probability
+    regularity event $R$, the error is $o(\varepsilon)$.
+  \item \textbf{Gaussian replacement.} Lindeberg exchange replaces subgaussian $X$
+    with Gaussian $Z$, at cost $o(\varepsilon)$. Uses negative correlation
+    inequalities.
+  \item \textbf{Rescaling.} Pass from truncated-chi bound back to singular value
+    via Tao--Vu universality. The Gaussian case gives the optimal constant.
+\end{enumerate}
+}}
+\end{center}
+
+The loss of $1 + o(1)$ comes from the truncation step and the Lindeberg step, each
+contributing a $(\log n)^{-c}$ error. Getting the constant exactly to~$1$ would
+require either eliminating the truncation (which seems hard, since the full chi
+statistic is too unwieldy for Lindeberg) or finding a completely different approach.
+
+% ===================================================================
+% 5. COMPUTATIONAL VERIFICATION
+% ===================================================================
+\section{Computational Verification}
+\label{sec:experiments}
+
+I ran Monte Carlo experiments to verify the bound empirically. The code generates
+random matrices from Gaussian and Rademacher distributions, computes their least
+singular values, and compares the empirical tail probabilities with the predictions
+of Theorem~\ref{thm:sss-main}.
+
+\subsection{Verifying the Main Bound}
+
+Figure~\ref{fig:sss-bound} plots the empirical probability $\Prob(\sigma_n(M) \le
+\varepsilon n^{-1/2})$ against $\varepsilon$ for Gaussian matrices at
+$n = 50, 200, 500$. The bound says this should be at most $(1 + o(1))\varepsilon$.
+At all three dimensions, the empirical CDF tracks the line $y = \varepsilon$ closely.
+The green dotted line shows the $(1 + \delta_n)\varepsilon$ envelope with
+$\delta_n = (\log n)^{-1/16}$. The empirical probabilities fall below this
+envelope, as predicted.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{sss_bound_verification.png}
+  \caption{Empirical CDF of $\sigma_n$ (rescaled) vs the SSS bound
+    $(1+o(1))\varepsilon$. Blue: empirical. Red dashed: ideal $\varepsilon$.
+    Green dotted: $(1+\delta_n)\varepsilon$ envelope. Based on 2000 trials per dimension.}
+  \label{fig:sss-bound}
+\end{figure}
+
+\subsection{Universality}
+
+Figure~\ref{fig:universality} compares the CDFs of $\sigma_n$ for Gaussian and
+Rademacher matrices. By $n = 200$, the two curves are nearly indistinguishable,
+confirming Theorem~\ref{thm:sss-universality}.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{universality_comparison.png}
+  \caption{Universality of the least singular value CDF: Gaussian vs Rademacher.
+    The distributions converge rapidly with increasing $n$.}
+  \label{fig:universality}
+\end{figure}
+
+\subsection{Convergence of the Edelman Density}
+
+Figure~\ref{fig:edelman} shows the empirical distribution of $n \cdot \sigma_n$
+compared with the Edelman limiting density~\eqref{eq:edelman-density}. Already
+at $n = 50$, the fit is good. At $n = 500$, it's nearly exact.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{edelman_comparison.png}
+  \caption{Scaled least singular value $n \cdot \sigma_n$ for Gaussian matrices,
+    overlaid with the Edelman density $f(x) = (x+1)e^{-x^2/2 - x}$.}
+  \label{fig:edelman}
+\end{figure}
+
+\subsection{Histograms Across Distributions}
+
+Figure~\ref{fig:histograms} displays raw histograms of $\sigma_n$ for both
+Gaussian and Rademacher matrices across six dimensions ($n = 10$ to $500$).
+The leftward shift and concentration near zero as $n$ grows are consistent
+with $\sigma_n = \Theta(1/n)$.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{least_sv_histograms.png}
+  \caption{Histograms of $\sigma_n$ for Gaussian and Rademacher matrices at six
+    dimensions. Each histogram is based on 2000 independent trials.}
+  \label{fig:histograms}
+\end{figure}
+
+\subsection{Convergence Rate of the $o(1)$ Term}
+
+The bound gives $o(1) = O((\log n)^{-1/16})$, and a natural question is whether this
+rate is visible in finite-dimensional experiments. Figure~\ref{fig:convergence}
+plots the ratio $\Prob(\sigma_n \le \varepsilon n^{-1/2}) / \varepsilon$ as a
+function of $n$ for several values of $\varepsilon$. This ratio should converge to~$1$.
+The convergence is slow (consistent with the logarithmic rate) but clearly present.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{convergence_ratio_vs_n.png}
+  \caption{Ratio $\Prob / \varepsilon$ vs $n$ for four values of $\varepsilon$.
+    Blue: Gaussian. Red: Rademacher. Green dotted: the $1 + (\log n)^{-1/16}$
+    upper envelope.}
+  \label{fig:convergence}
+\end{figure}
+
+Figure~\ref{fig:error-decay} isolates the error term $|\Prob/\varepsilon - 1|$
+for $\varepsilon = 0.3$ and plots it against $n$ on a log-log scale. The theoretical
+rate $(\log n)^{-1/16}$ provides an upper envelope.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{error_term_decay.png}
+  \caption{Decay of the error term $|\Prob/\varepsilon - 1|$ with $n$. Green
+    dotted: $(\log n)^{-1/16}$ reference.}
+  \label{fig:error-decay}
+\end{figure}
+
+\subsection{Tail Probabilities Across Dimensions}
+
+Figure~\ref{fig:prob-bounds} shows the tail probability $\Prob(\sigma_n < \varepsilon
+n^{-1/2})$ as a function of dimension for several $\varepsilon$ values. The probabilities
+remain below $C\varepsilon + e^{-cn}$ (Rudelson--Vershynin) at all dimensions tested.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{prob_bounds_vs_n.png}
+  \caption{Tail probability vs dimension for Gaussian matrices at several
+    $\varepsilon$ levels.}
+  \label{fig:prob-bounds}
+\end{figure}
+
+\subsection{Condition Number Experiments}
+
+Figures~\ref{fig:cond-scaling}--\ref{fig:cond-theory} verify the condition number
+consequences of the main bound. The median condition number of $\sigma G$ scales
+as $n/\sigma$ across dimensions (Figure~\ref{fig:cond-scaling}). Even the $50 \times 50$
+Hilbert matrix, with its astronomical unperturbed condition number, is tamed by Gaussian
+perturbation to match the $n/\sigma$ scaling (Figure~\ref{fig:cond-theory}).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{condition_number_scaling.png}
+  \caption{Median condition number vs $\sigma$ for Gaussian matrices at several
+    dimensions. Dashed gray: $n/\sigma$ reference.}
+  \label{fig:cond-scaling}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{condition_number_histograms.png}
+  \caption{Distribution of $\log_{10}\kappa$ at $\sigma = 0.1$ across dimensions.}
+  \label{fig:cond-hist}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.75\textwidth]{condition_vs_theory.png}
+  \caption{Median condition number for zero and Hilbert base matrices vs the $n/\sigma$
+    bound at $n = 50$.}
+  \label{fig:cond-theory}
+\end{figure}
+
+% ===================================================================
+% 6. DISCUSSION
+% ===================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+The Sah--Sahasrabudhe--Sawhney result closes a chapter that ran from Edelman's 1988
+density computation through Rudelson--Vershynin, Tao--Vu, and Tikhomirov. The least
+singular value of a random matrix with iid subgaussian entries satisfies
+$\Prob(\sigma_n \le \varepsilon n^{-1/2}) \le (1 + o(1))\varepsilon$, matching the
+Gaussian prediction up to a vanishing multiplicative error.
+
+What remains? The $o(1)$ term. It decays as $(\log n)^{-1/16}$, which is glacially
+slow. Getting the constant exactly to~$1$ would mean proving that the Rademacher (or
+any other subgaussian) least singular value distribution matches the Gaussian one
+with no error, not just vanishing error. That's a qualitatively different statement.
+The current proof loses the $o(1)$ at the truncation step and again at Lindeberg
+exchange. A proof that avoids both losses would probably need to bypass the ``reduce
+to anti-concentration, then Gaussianize'' paradigm entirely.
+
+The universality statement (Theorem~\ref{thm:sss-universality}) is, in a way, the
+deeper result. It says the full distribution of $\sigma_n$ is asymptotically the same
+for all subgaussian entry distributions. Our experiments confirm this: the Gaussian
+and Rademacher CDFs are visually identical by $n = 200$.
+
+From a practical standpoint, the bound confirms what numerical analysts have long
+observed. Random matrices are well-conditioned. Small perturbations of structured
+matrices are well-conditioned. The condition number of $M + \sigma G$ scales as
+$O(n/\sigma)$, and this is tight. The smoothed analysis framework of Spielman
+and Teng now rests on an essentially optimal theoretical foundation.
+
+\section*{Acknowledgments}
+Thanks to Zixiang Zhou for getting me interested in this problem and for many
+conversations about smoothed analysis and random matrix theory.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}
