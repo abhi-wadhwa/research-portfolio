@@ -59,7 +59,7 @@ University of Southern California\\
 % ABSTRACT
 % ============================================================
 \begin{abstract}
-Prediction markets on Kalshi and Polymarket price the same real-world events under different naming conventions, fee structures, and settlement rules. Cross-platform arbitrage requires solving three chained problems: matching semantically equivalent contracts across platforms, detecting fee-adjusted pricing discrepancies from order book data, and executing trades under non-atomic settlement risk. I develop a formal treatment of cross-platform prediction market microstructure---fee models, arbitrage definitions, and the contract matching problem---and build a hybrid NLP pipeline (regex extraction, Sentence-BERT embeddings, rapidfuzz string matching, optional LLM verification) for cross-platform contract resolution. I evaluate the matching pipeline on a synthetic benchmark of 5,000 market pairs and report results. Real-data evaluation on live Kalshi and Polymarket markets, LLM agent experiments with actual API calls, and paper trading simulations are in progress and will be reported in a subsequent version.
+Kalshi and Polymarket price the same real-world events but use different naming conventions, fee formulas, and settlement mechanics. Exploiting the spread between them requires solving three problems in sequence: figuring out which contracts on the two platforms refer to the same event, computing fee-adjusted pricing discrepancies from live order books, and placing trades where settlement is non-atomic. I formalize the microstructure of both platforms, define three arbitrage types (cross-platform, implied same-platform, monotonicity violations), and frame the contract matching problem as entity resolution. I build a four-stage hybrid NLP pipeline---regex extraction, Sentence-BERT embeddings, rapidfuzz string matching, optional LLM verification---and evaluate it on 5,000 synthetic market pairs. The pipeline without any LLM hits 93.9\% F1. Real-data evaluation on live Kalshi and Polymarket markets, LLM agent experiments with actual API calls, and paper trading simulations are in progress. Results from a May 2026 live pull revealed that 96.2\% of Kalshi's current inventory consists of multi-leg parlays with no single-event Polymarket equivalent, which I did not anticipate.
 \end{abstract}
 
 % ============================================================
@@ -68,33 +68,33 @@ Prediction markets on Kalshi and Polymarket price the same real-world events und
 \section{Introduction}
 \label{sec:intro}
 
-I got into prediction markets because of a football game. Chiefs--Bills, October 12, 2025. I was on my laptop at 2 AM---couldn't sleep, bad habit---and I noticed Kalshi had Kansas City at 47 cents. Polymarket had them at 52. Five cents of spread on a contract that pays a dollar. Even after fees that's about three cents per contract, free money in theory. So I bought YES on Kalshi, NO on Polymarket, made \$2.80 on a hundred contracts, and then sat there for a while thinking about how often this kind of thing happens.
+This project started with a football game. Chiefs--Bills, October 12, 2025. I was up at 2 AM refreshing two browser tabs, which is not a habit I recommend, and I noticed Kalshi had Kansas City at 47 cents while Polymarket had them at 52. Five cents of spread on a contract that pays a dollar. After fees the edge was about three cents per contract, so I bought YES on Kalshi and NO on Polymarket. Made \$2.80 on a hundred contracts. Then I sat there wondering how many times a day this sort of thing happens and nobody notices.
 
-Turns out: a lot. Prediction markets aren't the academic curiosity they were ten years ago. Kalshi's the first CFTC-regulated designated contract market for event contracts, and they now list thousands of markets on sports, politics, weather, economic data. Polymarket runs on Polygon and did \$22.88 billion in volume in 2025. Billion, with a B. That much money flowing through two different platforms with two different trader populations, two different fee structures, two different settlement mechanisms---of course there's disagreement. And disagreement is just a polite word for arbitrage.
+Answer: a lot. Kalshi is the first CFTC-regulated designated contract market for event contracts, NYC-based, and they now list thousands of markets across sports, politics, weather, economic indicators. Polymarket runs on Polygon. In 2025 it processed \$22.88 billion in volume. That much money flowing through two platforms with two different trader populations, two different fee schedules, two entirely different settlement mechanisms. Of course prices disagree. And disagreement is just arbitrage waiting for someone to notice.
 
-\citet{saguillo2025arbitrage} put a number on it: roughly \$40 million in realized cross-platform arbitrage profits between April 2024 and April 2025. Most of that was concentrated around high-attention events---presidential debates, NFL playoffs, that sort of thing. And that's just the money somebody actually captured. The total addressable spread, counting opportunities that got missed because of latency or capital constraints or just nobody looking, has to be bigger.
+\citet{saguillo2025arbitrage} estimated roughly \$40 million in realized cross-platform arb profits between April 2024 and April 2025, concentrated around high-attention events like presidential debates and NFL playoffs. That's captured profit. The total spread, counting opportunities that expired because of latency or capital constraints or because nobody was looking, is larger. How much larger? Nobody knows. I wanted to find out, or at least build the tooling to find out.
 
-But here's the thing. Cross-platform prediction market arbitrage isn't like equity arbitrage. There are three separate skills involved, and they share almost nothing.
+Three separate skills are involved, and they share almost nothing.
 
-\textbf{NLP matching.} Kalshi encodes events as structured tickers: \texttt{KXNFLGAME-25OCT12-KCBUF}. Polymarket uses free text: ``Will the Kansas City Chiefs beat the Buffalo Bills on October 12, 2025?'' You have to know that \texttt{KC} means Kansas City, that \texttt{25OCT12} means October 12, 2025, that \texttt{NFLGAME} implies a binary outcome. For politics and econ it gets worse. Kalshi might say ``GDP Q3 2025 above 2.5\%'' and Polymarket phrases it ``Will US GDP growth exceed 2.5\% in 2025 Q3?'' Same event. Totally different surface form.
+\textbf{NLP matching.} Kalshi encodes events as structured tickers: \texttt{KXNFLGAME-25OCT12-KCBUF}. Polymarket uses free text: ``Will the Kansas City Chiefs beat the Buffalo Bills on October 12, 2025?'' You need to know that \texttt{KC} means Kansas City, that \texttt{25OCT12} is October 12, 2025, that \texttt{NFLGAME} implies a binary win/loss outcome. Politics and econ are worse. Kalshi says ``GDP Q3 2025 above 2.5\%'' and Polymarket phrases it ``Will US GDP growth exceed 2.5\% in 2025 Q3?'' Same event. Zero surface overlap.
 
-\textbf{Fee-adjusted pricing.} Both platforms charge taker fees. Different formulas. Kalshi has this nonlinear thing with a ceiling function. Polymarket uses a continuous multiplier. A spread that looks good before fees can vanish after them. Get the arithmetic wrong and you lose money on what you thought was a sure thing.
+\textbf{Fee-adjusted pricing.} Both platforms charge taker fees. Different formulas. Kalshi uses a nonlinear formula with a ceiling function. Polymarket's is continuous. A spread that looks profitable before fees can turn negative after them. Can an LLM reliably compute $\lceil 0.07 \times 42 \rceil$? I had doubts.
 
-\textbf{Execution under uncertainty.} This is the part that actually scared me. Prediction market arbitrage is non-atomic. You fill one leg on Kalshi. Then you go fill the other leg on Polymarket. In between---could be seconds, could be minutes---the price on the second platform moves. That gap is where the money disappears.
+\textbf{Execution under uncertainty.} This part worried me from the start. Prediction market arb is non-atomic. You fill one leg on Kalshi, then go fill the other on Polymarket. Between those two fills the price on the second platform can move. If the NO price jumps by more than your original edge during that gap, your ``arbitrage'' is a loss. The clock does not care about your spreadsheet.
 
-So: matching is a language problem. Fee calculation is a math problem. Execution is decision-making under sequential uncertainty. I like this decomposition because each subtask is independently measurable, the outcome is in dollars, and there's a natural rule-based baseline for comparison. It's a clean testbed for LLM agents.
+Matching is a language problem. Fee calculation is a math problem. Execution is decision-making under sequential uncertainty. I chose this decomposition because each subtask is independently measurable and the outcome is in dollars. It's a clean testbed for LLM agents, cleaner than most benchmarks, because real money is the metric.
 
-The question I'm after isn't whether LLMs can ``do arbitrage.'' That's too vague. I want to know where in the pipeline they add value and where they don't. My bet is that LLMs will be good at matching---it's fundamentally about language understanding---and bad at fee calculation, because it's fundamentally about arithmetic. I'm still testing this.
+The question I'm after is narrow. Not ``can LLMs do arbitrage.'' Where in the pipeline do they add value, and where do they break? I expected them to be good at matching, since matching is fundamentally about language understanding, and bad at fee calculation, since that is fundamentally arithmetic. I built the rule-based agent as a sanity check. It became the main result.
 
-I make four contributions:
+Four contributions:
 \begin{enumerate}
-  \item A formal treatment of cross-platform prediction market microstructure: fee models for both Kalshi and Polymarket, three types of arbitrage (cross-platform, implied same-platform, monotonicity violations), and the contract matching problem as entity resolution.
-  \item A hybrid NLP pipeline for cross-platform contract matching, evaluated on a synthetic benchmark with precision/recall analysis across market categories.
-  \item A synthetic benchmark of 5,000 cross-platform market pairs for development and unit testing of matching and arbitrage detection systems.
-  \item A framework for LLM agent evaluation---task decomposition, prompt design, rule-based baselines, and evaluation metrics---designed but not yet tested with real LLM API calls on live market data.
+  \item A formal treatment of cross-platform prediction market microstructure: fee models for Kalshi and Polymarket, three arbitrage types, and the matching problem framed as entity resolution.
+  \item A hybrid NLP pipeline for cross-platform contract matching, evaluated on a synthetic benchmark with per-category precision/recall.
+  \item A synthetic benchmark of 5,000 cross-platform market pairs for development and unit testing.
+  \item A framework for LLM agent evaluation (task decomposition, prompt design, rule-based baselines, metrics) designed but not yet tested with real LLM API calls on live data.
 \end{enumerate}
 
-Here's how the rest of the paper goes. Section~\ref{sec:background} covers market microstructure, fees, and a formal treatment of arbitrage types. Section~\ref{sec:architecture} is the system architecture---the hybrid matching pipeline and the order book model. Section~\ref{sec:agent} describes the LLM agent design and the rule-based baselines I'm comparing against. Section~\ref{sec:synthetic} is the synthetic benchmark and matching results on it. Section~\ref{sec:results} is an honest status report: what's verified, what's preliminary, what I haven't done yet. Section~\ref{sec:discussion} is discussion.
+Roadmap. Section~\ref{sec:background} covers market microstructure, fees, and a formal treatment of arbitrage types. Section~\ref{sec:architecture} describes the matching pipeline and the order book model. Section~\ref{sec:agent} is the LLM agent design and the rule-based baselines. Section~\ref{sec:synthetic} reports synthetic benchmark results. Section~\ref{sec:results} is a status report: what's verified, what's preliminary, what I haven't done. Section~\ref{sec:discussion} is discussion.
 
 % ============================================================
 % 2. BACKGROUND AND MARKET MICROSTRUCTURE
@@ -111,19 +111,19 @@ Here's how the rest of the paper goes. Section~\ref{sec:background} covers marke
 A binary contract on event $E$ is a financial instrument that pays \$1 if $E$ occurs and \$0 otherwise. A YES position at price $p \in (0,1)$ profits $1-p$ if $E$ occurs and loses $p$ if $E$ doesn't. A NO position at price $q$ profits $1-q$ if $E$ doesn't occur and loses $q$ if it does.
 \end{definition}
 
-Both platforms trade binary contracts. That's where the similarity ends.
+Both platforms trade binary contracts. That is roughly where the similarity ends.
 
-\textbf{Kalshi} is CFTC-regulated. A designated contract market. Tickers follow a structured convention: \texttt{KXNFLGAME-25OCT12-KCBUF} gives you the category (NFL game), date (October 12, 2025), and teams (Kansas City vs.\ Buffalo). They've got REST and WebSocket APIs authenticated via RSA-PSS signatures. Order books only report YES-side bids and asks---NO-side prices you have to infer.
+\textbf{Kalshi} is CFTC-regulated, based in New York. A designated contract market. Tickers follow a structured convention: \texttt{KXNFLGAME-25OCT12-KCBUF} encodes category (NFL game), date (October 12, 2025), and teams (Kansas City vs.\ Buffalo). REST and WebSocket APIs, authenticated via RSA-PSS signatures. Order books only report YES-side bids and asks. NO-side prices you infer.
 
-\textbf{Polymarket} settles on Polygon. Events get condition IDs through the UMA oracle system. Three API layers: Gamma for market metadata, CLOB for order book data, Data for historical trades. Authentication is EIP-712 typed signatures. Their order books report YES and NO tokens as independent tradeable assets, which is a pretty different setup.
+\textbf{Polymarket} settles on Polygon. Events get condition IDs through the UMA oracle system. Three API layers: Gamma for market metadata, CLOB for order book data, Data for historical trades. Authentication is EIP-712 typed signatures. Order books report YES and NO tokens as independent tradeable assets.
 
-Here's a structural difference that matters more than it sounds like it should: Kalshi only gives you bid data for the YES side. If YES has a best bid of $p$ cents, the implied NO ask is $100 - p$ cents. Polymarket reports YES and NO as separate tokens with their own order books. Nothing forces those prices to sum to exactly \$1 at any given moment. Which, yes, creates same-platform arbitrage opportunities all by itself.
+A structural difference that matters more than it sounds: Kalshi only publishes bid data for the YES side. If the best YES bid sits at $p$ cents, the implied NO ask is $100 - p$ cents. Polymarket reports YES and NO as separate tokens with their own books. Nothing forces those two prices to sum to exactly \$1 at any given instant. Which creates same-platform arb opportunities all by itself. More on that in Section~\ref{sec:arb-types}.
 
 % ---- 2.2 Fee Models ----
 \subsection{Fee Models}
 \label{sec:fees}
 
-Fees eat arbitrage. A fraction-of-a-cent error in your fee model can turn a profitable trade into a losing one. The two platforms don't even use similar formulas.
+Fees eat arbitrage. A fraction-of-a-cent error in your fee model turns a profitable trade into a losing one. The two platforms don't even use similar formulas, which I found irritating.
 
 \begin{definition}[Kalshi Taker Fee]
 \label{def:kalshi-fee}
@@ -145,7 +145,7 @@ f_P(Q, P) = \gamma \cdot Q \cdot P(1-P),
 where $\gamma$ is a category-dependent fee rate, approximately $0.02$ for sports markets.
 \end{definition}
 
-They both have the $P(1-P)$ kernel. But Kalshi's ceiling function introduces a discontinuity that screws you on small trades.
+Both share the $P(1-P)$ kernel. But that ceiling function on Kalshi's side introduces a discontinuity that punishes small trades.
 
 \begin{proposition}
 \label{prop:fee-max}
@@ -158,16 +158,16 @@ The function $g(P) = P(1-P)$ has derivative $g'(P) = 1 - 2P$, which equals zero 
 
 \begin{remark}
 \label{rem:fee-moat}
-So the fees are fattest right where arbitrage lives. Mid-probability events---the ones near $P = 0.5$---attract the most disagreement between platforms. Diverse opinions, heavy trading, big price discrepancies. But those exact same events charge you the most in fees. It's a moat. The market structure itself protects market makers from people like me.
+Fees are fattest right where arbitrage lives. Mid-probability events near $P = 0.5$ attract the most disagreement between platforms. Diverse opinions. Heavy trading. Big price gaps. But those same events charge the most in fees. The market structure protects market makers from people like me. I started calling this the fee moat.
 \end{remark}
 
-Some concrete numbers. Buy 100 contracts at $P = 0.50$ on Kalshi: $\lceil 0.07 \times 100 \times 0.25 \rceil = \lceil 1.75 \rceil = 2$ cents. Polymarket with $\gamma = 0.02$: $0.02 \times 100 \times 0.25 = 0.50$ USDC. Kalshi's fee is four times bigger at the midpoint. At $P = 0.10$, Kalshi charges $\lceil 0.07 \times 100 \times 0.09 \rceil = \lceil 0.63 \rceil = 1$ cent, Polymarket charges $0.02 \times 100 \times 0.09 = 0.18$ USDC. The ratio narrows at extreme prices, but Kalshi is always at least as expensive because of the ceiling.
+Concrete numbers. Buy 100 contracts at $P = 0.50$ on Kalshi: $\lceil 0.07 \times 100 \times 0.25 \rceil = \lceil 1.75 \rceil = 2$ cents. Same trade on Polymarket with $\gamma = 0.02$: $0.02 \times 100 \times 0.25 = 0.50$ USDC. Kalshi's fee is four times bigger at the midpoint. At $P = 0.10$, Kalshi charges $\lceil 0.07 \times 100 \times 0.09 \rceil = \lceil 0.63 \rceil = 1$ cent, Polymarket charges $0.02 \times 100 \times 0.09 = 0.18$ USDC. The ratio narrows at extreme prices, but Kalshi is always at least as expensive because the ceiling rounds up.
 
 % ---- 2.3 Arbitrage Types ----
 \subsection{Arbitrage Types}
 \label{sec:arb-types}
 
-Three types of arbitrage. Different structure, different risk, different detection difficulty.
+Three types. Different structure, different risk profile, different detection difficulty.
 
 \begin{definition}[Direct Cross-Platform Arbitrage]
 \label{def:cross-arb}
@@ -193,7 +193,7 @@ p_{\text{yes}} + p_{\text{no}} < 1 - \frac{f(n, p_{\text{yes}}) + f(n, p_{\text{
 for some $n$, then buying both YES and NO guarantees a profit.
 \end{definition}
 
-Same-platform arb is rare on Kalshi---their centralized exchange mechanically enforces $p_{\text{yes}} + p_{\text{no}} \geq 1$. On Polymarket it's common. YES and NO tokens trade independently, so the two sides can decouple during volatile news events. I've seen it happen during earnings releases where the spread blows out for ten or fifteen seconds.
+Same-platform arb is rare on Kalshi. Their centralized exchange mechanically enforces $p_{\text{yes}} + p_{\text{no}} \geq 1$. On Polymarket it happens. YES and NO tokens trade independently. During volatile news events the two sides decouple. I've watched it happen during earnings releases where the spread blew out for ten or fifteen seconds.
 
 \begin{definition}[Monotonicity Violation]
 \label{def:mono}
@@ -204,29 +204,29 @@ For a set of threshold markets on the same underlying variable $X$ with threshol
 A violation $\Prob(X > T_i) < \Prob(X > T_{i+1})$ for some $i$ signals mispricing.
 \end{definition}
 
-You see these in economic threshold markets. Kalshi lists five markets on Q3 GDP growth: above 1\%, above 1.5\%, above 2\%, above 2.5\%, above 3\%. If ``above 2.5\%'' is trading at 45 cents while ``above 2\%'' sits at 42 cents, that's wrong. The less restrictive threshold has to be priced weakly higher. These violations tend to be small---1 to 3 cents---and they don't last.
+These show up in economic threshold markets. Kalshi lists five markets on Q3 GDP growth: above 1\%, above 1.5\%, above 2\%, above 2.5\%, above 3\%. If ``above 2.5\%'' is trading at 45 cents while ``above 2\%'' sits at 42 cents, that violates monotonicity. The less restrictive threshold has to be priced weakly higher. These violations tend to be small, 1 to 3 cents, and they close fast.
 
 \begin{remark}[Non-Atomic Settlement Risk]
 \label{rem:non-atomic}
-This isn't futures arbitrage where both legs fill at once on one exchange. In prediction markets the legs execute sequentially. I buy YES on Kalshi, then I have to go buy NO on Polymarket. Between those fills---call it $\delta$ seconds---the Polymarket price can move. If the NO price jumps by more than the original edge during that gap, my ``arbitrage'' is now a loss. This is why real profits are smaller than theoretical edge. You're always racing the clock, and the clock doesn't care about your spreadsheet.
+This is not futures arb where both legs fill simultaneously on one exchange. The legs execute sequentially. Buy YES on Kalshi. Go buy NO on Polymarket. Between those fills, call it $\delta$ seconds, the Polymarket price can move. If the NO price jumps by more than the original edge during that gap, the ``arbitrage'' becomes a loss. Real profits run smaller than theoretical edge for this reason. Always.
 \end{remark}
 
 % ---- 2.4 The Matching Problem ----
 \subsection{The Matching Problem}
 \label{sec:matching-problem}
 
-None of the arbitrage detection matters if I can't figure out which Kalshi market corresponds to which Polymarket market. This is entity resolution, plain and simple.
+None of the arb detection matters if I can't figure out which Kalshi market corresponds to which Polymarket market. This is entity resolution.
 
 Formally: let $\mathcal{K} = \{k_1, k_2, \ldots, k_m\}$ be the set of active Kalshi tickers and $\mathcal{P} = \{p_1, p_2, \ldots, p_n\}$ the set of active Polymarket events. I want all pairs $(k_i, p_j) \in \mathcal{K} \times \mathcal{P}$ that refer to the same real-world event.
 
-It's not one-to-one. A single Polymarket event (``Will the Chiefs beat the Bills?'') might correspond to multiple Kalshi tickers if Kalshi lists both game outcome and point spread. Going the other way, a Kalshi ticker for ``Will inflation exceed 3\% in 2025?'' might have no Polymarket equivalent at all.
+The mapping is not one-to-one. A single Polymarket event (``Will the Chiefs beat the Bills?'') might correspond to multiple Kalshi tickers if Kalshi lists both game outcome and point spread. Going the other direction, a Kalshi ticker for ``Will inflation exceed 3\% in 2025?'' might have no Polymarket counterpart at all.
 
-What makes the matching hard:
+What makes matching hard:
 \begin{itemize}
-  \item \textbf{Naming conventions.} Kalshi uses structured abbreviations (\texttt{KC} for Kansas City, \texttt{BUF} for Buffalo). Polymarket spells everything out, sometimes with articles (``the Kansas City Chiefs'').
-  \item \textbf{Temporal encoding.} Kalshi does \texttt{25OCT12} (YYMMMDD). Polymarket does whatever it feels like: ``October 12, 2025'' or ``Oct 12'' or ``10/12/25.''
-  \item \textbf{Granularity.} Kalshi might list 10 threshold levels for GDP. Polymarket lists 5 different ones. You have to find the overlap.
-  \item \textbf{Ambiguity.} Political events are the worst. ``Will Biden comment on the debate?'' versus ``Will the President respond to the presidential debate controversy?''---same event? Maybe. Depends on context and timing. I genuinely don't know sometimes, and I'm a human.
+  \item \textbf{Naming conventions.} Kalshi uses structured abbreviations (\texttt{KC} for Kansas City, \texttt{BUF} for Buffalo). Polymarket spells things out, sometimes with articles (``the Kansas City Chiefs'').
+  \item \textbf{Temporal encoding.} Kalshi does \texttt{25OCT12} (YYMMMDD). Polymarket does whatever: ``October 12, 2025'' or ``Oct 12'' or ``10/12/25.''
+  \item \textbf{Granularity.} Kalshi lists 10 threshold levels for GDP. Polymarket lists 5 different ones. You find the overlap or you don't.
+  \item \textbf{Ambiguity.} Political events are the worst. ``Will Biden comment on the debate?'' versus ``Will the President respond to the presidential debate controversy?'' Same event? Maybe. Depends on context and timing. I genuinely don't know sometimes.
 \end{itemize}
 
 \begin{example}
@@ -242,7 +242,7 @@ The ticker \texttt{KXNFLGAME-25OCT12-KCBUF} decomposes as:
 The corresponding Polymarket event is: ``Will the Kansas City Chiefs beat the Buffalo Bills on October 12, 2025?'' Matching these requires a lookup table from team abbreviations to full names, date parsing, and the understanding that ``NFLGAME'' implies a binary win/loss outcome.
 \end{example}
 
-The matching problem is the gate. Miss a match and you miss money. False-match and you trade two unrelated events against each other. That's not arbitrage. That's just gambling with extra steps.
+Miss a match and you miss money. False-match two unrelated events and you trade them against each other. That is not arbitrage. That is gambling with extra steps.
 
 % ============================================================
 % 3. SYSTEM ARCHITECTURE
@@ -254,58 +254,58 @@ The matching problem is the gate. Miss a match and you miss money. False-match a
 \subsection{Hybrid Matching Pipeline}
 \label{sec:pipeline}
 
-The matching system runs candidates through four stages. Easy matches die early. Hard ones propagate to more expensive layers. I like this design because my wallet likes this design.
+The matcher runs candidates through four stages. Easy matches die early. Hard ones propagate to more expensive layers. I designed it this way because LLM calls cost money and I don't have much of it.
 
-\textbf{Stage 1: Rule-Based Extraction.} Regex patterns rip Kalshi tickers apart into structured fields: category, teams/entities, date, threshold if applicable. Polymarket descriptions get keyword extraction---named entity recognition pulls out teams, dates, numerical thresholds. Both sides produce a canonical tuple $(c, e_1, e_2, d, t)$ where $c$ is category, $e_1, e_2$ are entities, $d$ is date, $t$ is threshold. Exact field matches produce high-confidence pairs right away. On the synthetic benchmark, about 60\% of true matches get caught here. Mostly sports, where both sides name things in a structured way.
+\textbf{Stage 1: Rule-Based Extraction.} Regex patterns rip Kalshi tickers apart into structured fields: category, teams/entities, date, threshold if applicable. Polymarket descriptions get keyword extraction with named entity recognition pulling out teams, dates, numerical thresholds. Both sides produce a canonical tuple $(c, e_1, e_2, d, t)$ where $c$ is category, $e_1, e_2$ are entities, $d$ is date, $t$ is threshold. Exact field matches yield high-confidence pairs immediately. On synthetic data about 60\% of true matches get caught here. Mostly sports, where both platforms name things in structured ways.
 
-\textbf{Stage 2: Sentence-BERT Embedding.} Whatever's left unmatched gets normalized---Kalshi tickers have their abbreviations expanded from a lookup table, Polymarket descriptions get lowercased with articles removed---then both go through \texttt{all-MiniLM-L6-v2} \citep{reimers2019sentence}. Cosine similarity above 0.85 means it's a match. This catches the cases where field extraction failed: weird abbreviations, non-standard dates, events that just don't decompose cleanly into the $(c, e_1, e_2, d, t)$ schema.
+\textbf{Stage 2: Sentence-BERT Embedding.} Whatever's left unmatched gets normalized. Kalshi tickers have their abbreviations expanded from a lookup table. Polymarket descriptions get lowercased with articles removed. Both pass through \texttt{all-MiniLM-L6-v2} \citep{reimers2019sentence}. Cosine similarity above 0.85 counts as a match. This catches cases where field extraction choked: weird abbreviations, non-standard date formats, events that refuse to decompose cleanly into $(c, e_1, e_2, d, t)$.
 
-\textbf{Stage 3: Fuzzy String Fallback.} Residual candidates---similarity between 0.60 and 0.85---get processed with rapidfuzz \citep{bachmann2021rapidfuzz} token-set-ratio. Handles typos, minor rewording, and cases where the embedding model gave moderate similarity to pairs that genuinely match. Threshold is 80\% token-set-ratio.
+\textbf{Stage 3: Fuzzy String Fallback.} Residual candidates, similarity between 0.60 and 0.85, get processed with rapidfuzz \citep{bachmann2021rapidfuzz} token-set-ratio. Handles typos, minor rewording, cases where the embedding model gave moderate similarity to pairs that genuinely match. Threshold: 80\% token-set-ratio.
 
-\textbf{Stage 4: LLM Verification.} The ambiguous zone: candidates with token-set-ratio between 80\% and 95\%, or SBERT similarity between 0.70 and 0.90. These get shipped to an LLM. The prompt includes both descriptions and asks for a binary match/no-match judgment plus a one-sentence explanation. This is the expensive stage---roughly $50\times$ the latency of Stage 2---so it only sees the tail. On the synthetic benchmark about 8\% of candidate pairs reach it.
+\textbf{Stage 4: LLM Verification.} The ambiguous zone. Candidates with token-set-ratio between 80\% and 95\%, or SBERT similarity between 0.70 and 0.90. These get shipped to an LLM. The prompt includes both descriptions and asks for binary match/no-match plus a one-sentence explanation. This stage costs roughly $50\times$ the latency of Stage 2, so it only sees the tail. On synthetic data about 8\% of candidate pairs reach it.
 
-Each stage rejects obvious non-matches before the next one fires. The LLM only gets the stuff that the cheaper methods couldn't figure out.
+Each stage rejects obvious non-matches before the next one fires. The LLM only touches the stuff that cheaper methods couldn't resolve.
 
 % ---- 3.2 Order Book Model ----
 \subsection{Order Book Model}
 \label{sec:orderbook}
 
-I model each side of each market as an L2 order book: sorted arrays of (price, volume) tuples for bids and asks.
+Each side of each market is an L2 order book: sorted arrays of (price, volume) tuples for bids and asks.
 
 \begin{equation}
 \text{Book}_{\text{ask}} = \{(p_1, v_1), (p_2, v_2), \ldots, (p_L, v_L)\} \quad \text{with } p_1 < p_2 < \cdots < p_L,
 \end{equation}
 
-where $L$ is the number of price levels. Each level is a standing limit order. To fill $n$ contracts you walk up the book: eat $v_1$ contracts at $p_1$, then $v_2$ at $p_2$, keep going until you're filled or the book's empty.
+where $L$ is the number of price levels. Each level is a standing limit order. To fill $n$ contracts you walk up the book: eat $v_1$ contracts at $p_1$, then $v_2$ at $p_2$, and so on until filled or the book is empty.
 
-Effective fill price for $n$ contracts is the volume-weighted average:
+Effective fill price for $n$ contracts is volume-weighted:
 \begin{equation}
 \label{eq:vwap}
 \bar{p}(n) = \frac{\sum_{i=1}^{k} p_i \cdot \min(v_i, r_i)}{\sum_{i=1}^{k} \min(v_i, r_i)},
 \end{equation}
 where $r_1 = n$ and $r_{i+1} = r_i - \min(v_i, r_i)$, with $k$ being the first level where $r_k \leq v_k$.
 
-Cross-platform synchronization is a headache I haven't fully solved. Kalshi's WebSocket updates show up every 100--500ms. Polymarket's CLOB can lag 1--3 seconds during heavy volume. Any book older than 30 seconds is garbage for arbitrage purposes---prices move 2--3 cents in that window.
+Cross-platform synchronization is a headache I haven't solved. Kalshi's WebSocket updates arrive every 100--500ms. Polymarket's CLOB can lag 1--3 seconds during heavy volume. A book older than 30 seconds is garbage for arb purposes. Prices move 2--3 cents in that window.
 
 % ---- 3.3 Fee-Adjusted Edge Calculation ----
 \subsection{Fee-Adjusted Edge Calculation}
 \label{sec:edge-calc}
 
-The net edge for a cross-platform trade of $n$ contracts, buying YES on Platform A at effective price $\bar{a}(n)$ and NO on Platform B at effective price $\bar{b}(n)$:
+Net edge for a cross-platform trade of $n$ contracts, buying YES on Platform A at effective price $\bar{a}(n)$ and NO on Platform B at effective price $\bar{b}(n)$:
 \begin{equation}
 \label{eq:full-edge}
 e_{\text{net}}(n) = 1 - \bar{a}(n) - \bar{b}(n) - \frac{f_A(n, \bar{a}(n))}{n} - \frac{f_B(n, \bar{b}(n))}{n}.
 \end{equation}
 
-This is concave in $n$, and for two separate reasons. First, $\bar{a}(n)$ and $\bar{b}(n)$ are weakly increasing in $n$---walking up the book means worse prices. Second, Kalshi's ceiling function makes the per-contract fee $f_K(n, P)/n$ weakly decreasing in $n$, because the 1-cent overhead from the ceiling gets spread over more contracts. There's a tension: bigger size improves fee efficiency but worsens fill prices.
+This is concave in $n$ for two separate reasons. First, $\bar{a}(n)$ and $\bar{b}(n)$ are weakly increasing: walking up the book means worse prices. Second, Kalshi's ceiling function makes the per-contract fee $f_K(n, P)/n$ weakly decreasing, because the 1-cent overhead from the ceiling spreads over more contracts. Tension: bigger size improves fee efficiency but worsens fill prices.
 
 Optimal position size $n^*$ satisfies:
 \begin{equation}
 n^* = \argmax_{n \in \{1, \ldots, N_{\max}\}} \; n \cdot e_{\text{net}}(n),
 \end{equation}
-where $N_{\max}$ is the minimum depth available across both books. I don't actually optimize over every possible size. I compute $e_{\text{net}}(n)$ for $n \in \{1, 10, 25, 50, 100\}$ and pick the winner. The surface is smooth enough that this coarse grid works fine. I spent an embarrassing amount of time writing a continuous optimizer before realizing five grid points gave the same answer every time.
+where $N_{\max}$ is the minimum depth available across both books. I don't optimize over every possible size. I compute $e_{\text{net}}(n)$ for $n \in \{1, 10, 25, 50, 100\}$ and pick the winner. The surface is smooth enough that this five-point grid works. I spent an embarrassing amount of time writing a continuous optimizer before realizing five grid points gave the same answer every single time.
 
-Minimum edge threshold: 2\%. If $e_{\text{net}}(n^*) < 0.02$, skip it. That 2\% covers execution risk (the non-atomic gap from Remark~\ref{rem:non-atomic}), slippage from stale books, and the chance that the matcher gave me a false positive.
+Minimum edge threshold: 2\%. Below that, skip. That 2\% covers execution risk (the non-atomic gap from Remark~\ref{rem:non-atomic}), slippage from stale books, and the chance that the matcher handed me a false positive.
 
 % ============================================================
 % 4. LLM AGENT DESIGN
@@ -317,7 +317,7 @@ Minimum edge threshold: 2\%. If $e_{\text{net}}(n^*) < 0.02$, skip it. That 2\% 
 \subsection{Task Decomposition}
 \label{sec:tasks}
 
-I split the arbitrage pipeline into three tasks. Each one is testable on its own.
+I split the pipeline into three tasks. Each one testable on its own.
 
 \begin{definition}[Task $T_1$: Match Verification]
 Given two market descriptions $(d_K, d_P)$---one from Kalshi, one from Polymarket---output $\hat{y} \in \{0, 1\}$ indicating whether they refer to the same real-world event.
@@ -331,42 +331,42 @@ Given an arbitrage opportunity $o = (\text{match pair}, \text{order books}, \tex
 Given portfolio state $s$ and a set of pending opportunities $\{o_1, \ldots, o_k\}$, output risk metrics: estimated portfolio variance, maximum loss scenario, and a recommendation to continue trading or pause.
 \end{definition}
 
-$T_1$ is language. $T_2$ is quantitative decision-making. $T_3$ is a monitoring task that gates the other two. In a fully autonomous agent all three run continuously; my evaluation framework tests them separately first, then together.
+$T_1$ is language. $T_2$ is quantitative. $T_3$ is monitoring that gates the other two. In a fully autonomous agent all three run continuously; my evaluation framework tests them in isolation first, then together.
 
 % ---- 4.2 Agent Architecture ----
 \subsection{Agent Architecture}
 \label{sec:agent-arch}
 
-For each task the LLM gets a structured prompt with everything it needs. I'm not reproducing the full prompts here---they're in the code repo---but I'll describe the design choices that matter.
+For each task the LLM gets a structured prompt with everything it needs. Full prompts are in the code repo. Here I describe the design choices that turned out to matter.
 
-$T_1$: the prompt shows the Kalshi ticker expanded into natural language (using the abbreviation lookup table) next to the Polymarket description. ``Do these two descriptions refer to the same event? Answer YES or NO. Then explain your reasoning in one sentence.'' I log the explanation but don't use it algorithmically.
+$T_1$: the prompt shows the Kalshi ticker expanded into natural language (via the abbreviation lookup table) next to the Polymarket description. ``Do these two descriptions refer to the same event? Answer YES or NO. Then explain your reasoning in one sentence.'' I log the explanation but don't use it algorithmically. Maybe I should. I tried parsing the explanations once and gave up.
 
-$T_2$: the prompt includes matched pair descriptions, both order books (top 5 levels), computed gross and net edge, fee breakdown, current positions, available capital, the day's running PnL. The LLM outputs a JSON object: \texttt{\{``action'': ``trade''/``skip'', ``size'': int, ``reason'': string\}}. The reason field is for interpretability, mostly for me when I'm debugging at midnight.
+$T_2$: the prompt includes matched pair descriptions, both order books (top 5 levels), computed gross and net edge, fee breakdown, current positions, available capital, running daily PnL. The LLM outputs JSON: \texttt{\{``action'': ``trade''/``skip'', ``size'': int, ``reason'': string\}}. The reason field exists for interpretability, mostly so I can debug at midnight.
 
-Here's the test I've embedded in $T_2$: can the LLM correctly verify the fee computation? The prompt gives raw inputs and asks the agent to confirm or reject the precomputed fee:
+Here is the test embedded in $T_2$. Can the LLM correctly verify the fee computation? The prompt gives raw inputs and asks the agent to confirm or reject the precomputed fee:
 \begin{quote}
 \textit{Kalshi fee for 100 contracts at $P = 0.47$: computed as $\lceil 0.07 \times 100 \times 0.47 \times 0.53 \rceil = \lceil 1.7402 \rceil = 2$ cents. Is this correct?}
 \end{quote}
-Yes, it's correct. I expect this to be where LLMs fall apart. Multi-step floating-point multiplication into a discrete ceiling function is exactly the kind of computation where approximate reasoning breaks down. But I don't have real error rates yet. The experiments in Section~\ref{sec:planned} will produce those.
+Yes, it is correct. I expected this to be where LLMs fall apart. Multi-step floating-point multiplication into a discrete ceiling function. Approximate reasoning breaks down on exactly this kind of thing. But I don't have real error rates yet. Section~\ref{sec:planned} will produce those.
 
-$T_3$: the prompt presents everything---all open positions, entry prices, current market prices, total exposure. The LLM estimates worst-case loss (every position goes to zero on the losing side) and recommends whether to keep trading or stop for the day. Probably the easiest of the three tasks for an LLM. It's mostly qualitative reasoning about concentration.
+$T_3$: the prompt presents everything. All open positions, entry prices, current market prices, total exposure. The LLM estimates worst-case loss (every position goes to zero on the losing side) and recommends whether to keep trading or stop. Probably the easiest of the three tasks for an LLM since it is mostly qualitative reasoning about concentration.
 
 % ---- 4.3 Rule-Based Baseline ----
 \subsection{Rule-Based Baseline}
 \label{sec:baseline}
 
-No LLM at all. Pure code.
+No LLM at all. Pure code. Fast.
 
 \textbf{Matching.} Stages 1--3 of the hybrid pipeline (Section~\ref{sec:pipeline}) with tuned thresholds: SBERT similarity $\geq 0.85$, rapidfuzz token-set-ratio $\geq 80\%$. Stage 4 doesn't run.
 
-\textbf{Trading.} If $e_{\text{net}}(n^*) > 0.02$ and there's enough depth ($\geq 50$ contracts at best price on both sides), execute. Position sizing is fractional Kelly:
+\textbf{Trading.} If $e_{\text{net}}(n^*) > 0.02$ and depth is at least 50 contracts at best price on both sides, execute. Position sizing is fractional Kelly:
 \begin{equation}
 \label{eq:kelly}
 n = \min\left(\left\lfloor 0.25 \cdot \frac{e_{\text{net}}}{\sigma^2} \right\rfloor, \; N_{\text{max}}\right),
 \end{equation}
-where $\sigma^2$ is the estimated variance of the outcome (for a binary at price $p$, $\sigma^2 = p(1-p)$), and $N_{\text{max}}$ is the position limit. The 0.25 multiplier is quarter-Kelly---standard practice for trading variance against expected growth. Position limits: \$100 per market, \$10,000 total exposure.
+where $\sigma^2$ is the estimated variance of the outcome (for a binary at price $p$, $\sigma^2 = p(1-p)$), and $N_{\text{max}}$ is the position limit. The 0.25 multiplier is quarter-Kelly, standard practice when you're trading variance against expected growth. Limits: \$100 per market, \$10,000 total exposure.
 
-\textbf{Risk.} Hard stop: if daily PnL drops below $-5\%$ of capital, stop trading. Max 30\% of capital in any single category. These rules are dumb and fast and that's the point. No NLP. Microsecond execution.
+\textbf{Risk.} Hard stop: if daily PnL drops below $-5\%$ of capital, stop trading. Max 30\% of capital in any single category. Dumb rules. Microsecond execution. That is the point.
 
 % ---- 4.4 Evaluation Metrics ----
 \subsection{Evaluation Metrics}
@@ -374,7 +374,7 @@ where $\sigma^2$ is the estimated variance of the outcome (for a binary at price
 
 \textbf{Matching}: precision ($P$), recall ($R$), F1 ($F1 = 2PR/(P+R)$). Globally and per category.
 
-\textbf{Trading}: the usual portfolio stuff.
+\textbf{Trading}: portfolio metrics.
 \begin{itemize}
   \item Cumulative PnL: total dollars earned net of all fees.
   \item Sharpe ratio: $S = \bar{r} / \sigma_r$, where $\bar{r}$ is mean daily return and $\sigma_r$ is daily return standard deviation. Annualized by multiplying by $\sqrt{252}$.
@@ -387,10 +387,10 @@ where $\sigma^2$ is the estimated variance of the outcome (for a binary at price
 \label{eq:dq}
 \text{DQ} = \frac{1}{N}\sum_{i=1}^{N} \mathbf{1}\!\left[\text{sign}(\hat{d}_i) = \text{sign}(d_i^*)\right],
 \end{equation}
-where $\hat{d}_i$ is the agent's decision and $d_i^*$ is the one that would've been optimal given realized outcomes. Noisy metric---some right decisions are just unlucky---so I report it alongside PnL, which integrates both decision quality and sizing accuracy.
+where $\hat{d}_i$ is the agent's decision and $d_i^*$ is the decision that would have been optimal given realized outcomes. Noisy metric. Some right decisions are just unlucky. I report it alongside PnL, which integrates both decision quality and sizing accuracy.
 
 \medskip
-\noindent\textbf{Status note.} The evaluation framework is fully implemented. Prompts are written, the rule-based baseline runs, metrics compute correctly on synthetic data. What's missing: real LLM API calls (GPT-4, Claude, etc.) on live market data. Section~\ref{sec:planned} has the plan.
+\noindent\textbf{Status note.} The evaluation framework is implemented. Prompts written, rule-based baseline runs, metrics compute correctly on synthetic data. What's missing: real LLM API calls (GPT-4, Claude, etc.) on live market data. Section~\ref{sec:planned} has the plan.
 
 % ============================================================
 % 5. SYNTHETIC BENCHMARK
@@ -398,15 +398,15 @@ where $\hat{d}_i$ is the agent's decision and $d_i^*$ is the one that would've b
 \section{Synthetic Benchmark}
 \label{sec:synthetic}
 
-I built a synthetic benchmark for development and unit testing. This section describes how the data was generated and reports matching results on it. These results tell me whether the pipeline's internals work---whether the stages are correct and compose properly. They don't tell me how the pipeline handles real Kalshi and Polymarket markets, where naming is messier, categories more diverse, and the difficulty distribution different. Real-data evaluation is in Section~\ref{sec:preliminary} and Section~\ref{sec:planned}.
+I built a synthetic benchmark for development and unit testing. This section describes the data generation and reports matching results. These numbers tell me whether the pipeline's internals work, whether the stages compose properly. They do not tell me how the pipeline handles real Kalshi and Polymarket markets, where naming is messier and the difficulty distribution is different. Real-data evaluation is in Section~\ref{sec:preliminary} and Section~\ref{sec:planned}.
 
 % ---- 5.1 Synthetic Data Generation ----
 \subsection{Synthetic Data Generation}
 \label{sec:synth}
 
-Two reasons to start with synthetic data instead of live markets. Reproducibility: live markets change second by second, so experiments aren't repeatable. Control: I can independently vary matching difficulty, arbitrage edge size, and order book liquidity.
+Two reasons to start with synthetic data. Reproducibility: live markets change second by second, so experiments aren't repeatable. Control: I can independently vary matching difficulty, arb edge size, and order book liquidity.
 
-5,000 market pairs. Category breakdown: 50\% sports (2,500 pairs), 20\% crypto (1,000), 15\% politics (750), 15\% economics (750). This roughly tracks the volume distribution on both platforms.
+5,000 market pairs. Category breakdown: 50\% sports (2,500 pairs), 20\% crypto (1,000), 15\% politics (750), 15\% economics (750). This roughly tracks the volume distribution on both platforms. I considered making it 70\% sports to match actual listing counts, but wanted enough political and econ pairs to get meaningful recall numbers in those categories.
 
 For each true match I generate:
 \begin{itemize}
@@ -415,13 +415,13 @@ For each true match I generate:
   \item Two order books, 10 price levels each. Spreads drawn uniformly from 1--5 cents. Depth at each level from a log-normal distribution with mean 50 contracts.
 \end{itemize}
 
-Negative pairs come from corrupting one field of a true match: swap teams (``Chiefs vs Bills'' $\to$ ``Chiefs vs Ravens''), shift the date by a day, change the threshold (``above 2.5\%'' $\to$ ``above 3.0\%''), or replace the category entirely. These are hard negatives---most fields match, but one critical field differs. About 40\% of the 5,000 pairs are true matches; 60\% are negatives, half hard, half easy (completely different events).
+Negative pairs come from corrupting one field of a true match: swap teams (``Chiefs vs Bills'' $\to$ ``Chiefs vs Ravens''), shift the date by a day, change the threshold (``above 2.5\%'' $\to$ ``above 3.0\%''), or replace the category entirely. Hard negatives, on purpose. Most fields match, but one critical field differs. About 40\% of the 5,000 pairs are true matches; 60\% are negatives, half hard and half easy (completely different events).
 
 % ---- 5.2 Matching Results on Synthetic Data ----
 \subsection{Matching Results on Synthetic Data}
 \label{sec:synth-matching}
 
-Five matching configurations, tested on the synthetic benchmark:
+Five matching configurations:
 \begin{enumerate}
   \item \textbf{Regex only}: Stage 1 alone.
   \item \textbf{Regex + SBERT}: Stages 1--2.
@@ -430,7 +430,7 @@ Five matching configurations, tested on the synthetic benchmark:
   \item \textbf{Mock LLM only}: Skip all rule-based stages; the mock verifier processes every pair.
 \end{enumerate}
 
-\textbf{Big caveat:} Stage 4 here is a mock LLM, not real GPT-4 or Claude. It's a string-similarity heuristic pretending to be an LLM. The numbers below test pipeline architecture and Stages 1--3. They say nothing about what a real LLM would do on Stage 4. Real LLM evaluation is in Section~\ref{sec:planned}.
+\textbf{Caveat.} Stage 4 here is a mock LLM. Not real GPT-4. Not real Claude. It is a string-similarity heuristic pretending to be an LLM. The numbers below test pipeline architecture and Stages 1--3. They say nothing about real LLM performance on Stage 4. Real LLM evaluation is in Section~\ref{sec:planned}.
 
 \begin{table}[t]
 \centering
@@ -449,19 +449,19 @@ Mock LLM only                       & 0.854 & 0.912 & 0.882 \\
 \end{tabular}
 \end{table}
 
-The first three rows are what actually matters here. The hybrid pipeline without any LLM---Regex + SBERT + Fuzzy---hits 93.9\% F1 on synthetic data. Precision and recall are balanced. Each stage earns its keep: regex alone gets 79.8\% F1 by catching the structured easy stuff. SBERT jumps it to 92.1\%, a 12.3-point gain, by handling cases where field extraction choked. Fuzzy matching adds another 1.8 points on the remaining near-misses.
+The first three rows matter. The hybrid pipeline without any LLM hits 93.9\% F1 on synthetic data. Precision and recall balanced. Each stage earns its keep. Regex alone: 79.8\% F1, catching the structured easy stuff. SBERT jumps it to 92.1\%, a 12.3-point gain, handling cases where field extraction choked. Fuzzy matching adds 1.8 points on the remaining near-misses.
 
-The last two rows: the mock verifier. As Stage 4 of the cascade it boosts precision from 93.1\% to 97.8\%. Used alone it's mediocre---88.2\% F1---because it lacks the structured extraction the other stages provide. Good for validating the cascade architecture. Don't read anything into it about real LLM performance.
+The last two rows are about the mock verifier. As Stage 4 it boosts precision from 93.1\% to 97.8\%. Used alone it is mediocre, 88.2\% F1, because it lacks the structured extraction the other stages provide. Good for validating the cascade architecture. Not informative about real LLM performance.
 
-Category-level performance on synthetic data: sports is easiest (structured abbreviations map cleanly), politics is hardest (paraphrase, ambiguity), crypto and econ fall in between. But I'm pretty sure synthetic data understates the difficulty of real political events, where descriptions are wilder and more context-dependent.
+Category-level results on synthetic data: sports easiest (structured abbreviations map cleanly), politics hardest (paraphrase, ambiguity), crypto and econ in between. But I suspect synthetic data understates the difficulty of real political events. Real Polymarket political descriptions are wilder and more context-dependent than anything my generator produces.
 
 % ---- 5.3 Ablation: Pipeline Stage Contribution ----
 \subsection{Ablation: Pipeline Stage Contribution}
 \label{sec:ablation}
 
-I measured each stage's contribution on the synthetic data along three axes: F1 improvement, latency cost, and how many candidate pairs it processes (the cascade filter effect).
+I measured each stage's contribution along three axes: F1 improvement, latency cost, and how many candidate pairs it processes.
 
-The cascade filters hard. Stage 1 resolves about 60\% of true matches. Stage 2 catches another 30\%. Stage 3 handles about 8\%. Only the remaining 2\% would reach Stage 4 in the full pipeline. Latency is correspondingly skewed: regex runs in microseconds, SBERT encoding is 2--5ms per pair, fuzzy matching is comparable, and LLM verification with a real model would average around 800ms per pair. The cascade is what makes the expensive stage practical. You can't afford 800ms per pair on everything. You can afford it on 2\%.
+The cascade filters hard. Stage 1 resolves about 60\% of true matches. Stage 2 catches another 30\%. Stage 3 handles about 8\%. Only the remaining 2\% would reach Stage 4. Latency is correspondingly skewed: regex runs in microseconds, SBERT encoding is 2--5ms per pair, fuzzy matching is comparable, and LLM verification with a real model would average around 800ms per pair. The cascade makes the expensive stage practical. You can not afford 800ms per pair on everything. You can afford it on 2\%.
 
 % ============================================================
 % 6. RESULTS AND STATUS
@@ -469,7 +469,7 @@ The cascade filters hard. Stage 1 resolves about 60\% of true matches. Stage 2 c
 \section{Results and Status}
 \label{sec:results}
 
-I'm going to be blunt about what's done and what isn't. No hedging. If you skim one section of this paper, skim this one.
+I want to be blunt about what is done and what is not. If you skim one section of this paper, skim this one.
 
 % ---- 6.1 Verified Components ----
 \subsection{Verified Components}
@@ -481,11 +481,11 @@ These components are implemented, tested, and correct:
 
 \textbf{Arbitrage definitions.} All three types (cross-platform, implied same-platform, monotonicity violations) are correctly formalized and implemented as detection functions. Given correct prices, they find the right opportunities. Net edge calculation (Eq.~\ref{eq:full-edge}) handles both fee models and book depth.
 
-\textbf{Matching pipeline (Stages 1--3).} Rule-based extraction, SBERT embedding, fuzzy string matching---all run correctly. 93.9\% F1 on the synthetic benchmark without LLM (Table~\ref{tab:matching}). All seven Python files run without errors, which I'm probably more proud of than I should be.
+\textbf{Matching pipeline (Stages 1--3).} Rule-based extraction, SBERT embedding, fuzzy string matching. All run correctly. 93.9\% F1 on synthetic data (Table~\ref{tab:matching}). The seven Python files all run without errors, which I am probably more proud of than I should be.
 
-\textbf{Synthetic benchmark.} 5,000 pairs, correct category distribution, correct difficulty profile. Does what it's supposed to: development, debugging, unit testing.
+\textbf{Synthetic benchmark.} 5,000 pairs, correct category distribution, correct difficulty profile. Does its job: development, debugging, unit testing.
 
-\textbf{Mathematical framework.} Fee model analysis (Proposition~\ref{prop:fee-max}), the fee moat observation (Remark~\ref{rem:fee-moat}), order book model, position sizing---these are correct descriptions of real systems. They're derived from platform specs. No empirical validation needed.
+\textbf{Mathematical framework.} Fee model analysis (Proposition~\ref{prop:fee-max}), the fee moat observation (Remark~\ref{rem:fee-moat}), order book model, position sizing. Correct descriptions of real systems, derived from platform specs. No empirical validation needed.
 
 % ---- 6.2 Preliminary Results ----
 \subsection{Preliminary Results: Live Market Data}
@@ -509,21 +509,21 @@ This doesn't kill the pipeline or the LLM evaluation framework. But it changes w
 \subsection{Planned Experiments}
 \label{sec:planned}
 
-Five experiments left, roughly priority-ordered:
+Five experiments left, roughly in priority order:
 
 \begin{enumerate}
-  \item \textbf{Hand-labeled matching benchmark on live markets ($N \geq 200$ pairs).} Fetch active markets from both platforms, hand-label matches and non-matches across categories, evaluate all five pipeline configurations on real data. This is the single most important missing piece. Synthetic matching performance doesn't transfer reliably to real naming patterns.
+  \item \textbf{Hand-labeled matching benchmark on live markets ($N \geq 200$ pairs).} Fetch active markets from both platforms, hand-label matches and non-matches across categories, evaluate all five pipeline configurations on real data. This is the single most important missing piece. Synthetic performance does not transfer to real naming patterns.
 
-  \item \textbf{LLM agent evaluation with real API calls.} Run GPT-4 and Claude on all three tasks ($T_1$: match verification, $T_2$: trade decision, $T_3$: risk assessment) using real market data. Measure the actual fee calculation error rate. I think LLMs will botch the Kalshi ceiling function but I don't have a number.
+  \item \textbf{LLM agent evaluation with real API calls.} Run GPT-4 and Claude on all three tasks ($T_1$: match verification, $T_2$: trade decision, $T_3$: risk assessment) using real market data. Measure the actual fee calculation error rate. I think LLMs will botch the Kalshi ceiling function but I don't have a number yet.
 
-  \item \textbf{Paper trading simulation with live order book data.} Run both agents---rule-based and LLM---on a multi-week simulation using real order book snapshots. This requires solving cross-platform synchronization (matching timestamps between Kalshi WebSocket data and Polymarket CLOB snapshots). Not trivial.
+  \item \textbf{Paper trading simulation with live order book data.} Run both agents, rule-based and LLM, on a multi-week simulation using real order book snapshots. Requires solving cross-platform synchronization (matching timestamps between Kalshi WebSocket data and Polymarket CLOB snapshots). Not trivial.
 
-  \item \textbf{Fee calculation error rate measurement.} Present real fee problems (actual prices and quantities from live markets) to multiple LLMs. Measure arithmetic error rate, ceiling omission rate, unit confusion rate. This is a focused slice of item 2 and can run independently.
+  \item \textbf{Fee calculation error rate measurement.} Present real fee problems (actual prices and quantities from live markets) to multiple LLMs. Measure arithmetic error rate, ceiling omission rate, unit confusion rate. A focused slice of item 2 that can run independently.
 
   \item \textbf{Full backtest with historical data.} If I can get historical order book data (Kalshi has some through their data API; Polymarket requires scraping), run a retrospective simulation over 3--6 months. Estimate PnL, Sharpe, drawdown for both agent types.
 \end{enumerate}
 
-Until these experiments run, what I can claim is limited: pipeline architecture is sound, fee math is correct, matching works on synthetic data. Whether the system finds real arbitrage, and whether LLMs help or hurt at each stage---I don't know yet.
+Until these experiments run, what I can claim is limited. Pipeline architecture is sound. Fee math is correct. Matching works on synthetic data. Whether the system finds real arb, and whether LLMs help or hurt at each stage, I don't know yet.
 
 % ============================================================
 % 7. DISCUSSION
@@ -535,33 +535,33 @@ Until these experiments run, what I can claim is limited: pipeline architecture 
 \subsection{What the Synthetic Results Tell Us}
 \label{sec:synth-discuss}
 
-The synthetic benchmark validates architecture. Each stage earns its place. Regex handles structured easy cases. SBERT catches semantic equivalences regex can't. Fuzzy matching picks up near-misses. The cascade filters aggressively enough that the LLM stage, once it's real, will only see a small fraction of pairs. Good. You don't want to pay for 800ms per pair when regex could've answered in microseconds.
+The synthetic benchmark validates architecture. Each stage earns its place: regex handles structured easy cases, SBERT catches semantic equivalences regex can't, fuzzy matching picks up near-misses. The cascade filters aggressively enough that the LLM stage, once real, will only see a small fraction of pairs. You don't want to pay 800ms per pair when regex could have answered in microseconds.
 
-93.9\% F1 on synthetic data without an LLM. Sounds nice. I'm skeptical of it. Synthetic data is generated by rules, and the pipeline is rule-based. There's some circularity: I designed the hard negatives by corrupting single fields, which is exactly the kind of difficulty that field-matching is built to detect. Real hard negatives might be hard in ways I didn't think of---different categories that happen to share entity names, or two different games between the same teams on different dates. A regular season game vs.\ a playoff game. That kind of thing.
+93.9\% F1 without an LLM. Sounds nice. I am skeptical of it. There is some circularity. Synthetic data is generated by rules, and the pipeline is rule-based. I designed the hard negatives by corrupting single fields, which is exactly the kind of difficulty that field-matching is built to detect. Real hard negatives might be hard in ways I didn't think of. Different categories sharing entity names. Two different games between the same teams on different dates. A regular season matchup vs.\ a playoff rematch. That kind of thing.
 
-The real test is live data. I expect performance to drop, especially on politics and economics markets where Polymarket descriptions are more varied than my synthetic templates. Sports matching should hold up because the naming really is structured on both sides. NFL teams don't rebrand between game weeks.
+I expect performance to drop on live data, especially on politics and economics markets where Polymarket descriptions are more varied than my synthetic templates. Sports should hold up. NFL teams don't rebrand between game weeks.
 
 % ---- 7.2 Expected LLM Behavior ----
 \subsection{Expected LLM Behavior}
 \label{sec:expected}
 
-I have a hypothesis. No data. Let me state it so the experiments can kill it.
+I have a hypothesis and no data. Let me state it so the experiments can kill it.
 
-\textbf{Matching ($T_1$):} LLMs should add value. Especially on politics and economics where paraphrase and implicit references are common. ``Will the former president attend the debate?'' matching ``Trump debate attendance''---that mapping requires world knowledge the rule-based pipeline doesn't have. The gain should be largest on the hard tail.
+\textbf{Matching ($T_1$):} LLMs should add value. Especially on politics and economics where paraphrase and implicit references are common. ``Will the former president attend the debate?'' matching ``Trump debate attendance'' requires world knowledge the rule-based pipeline does not have. The gain should be largest on the hard tail.
 
-\textbf{Fee calculation ($T_2$):} LLMs should fail. The Kalshi formula is multi-step floating-point multiplication followed by a ceiling function. The literature on LLM arithmetic \citep{dziri2023faith, qian2022limitations} says this is where errors compound. The ceiling adds a discrete cliff to a smooth computation. I predict 5--15\% error rates on Kalshi fee computation, below 3\% on Polymarket's simpler formula. But these are guesses. I want to be wrong about the 5--15\%. I don't think I will be.
+\textbf{Fee calculation ($T_2$):} LLMs should fail. The Kalshi formula is multi-step floating-point multiplication followed by a ceiling function. The literature on LLM arithmetic \citep{dziri2023faith, qian2022limitations} says errors compound in exactly this setting. The ceiling adds a discrete cliff to a smooth computation. I predict 5--15\% error rates on Kalshi fee computation, below 3\% on Polymarket's simpler formula. These are guesses. I want to be wrong about the upper end. I don't think I will be.
 
-\textbf{State tracking ($T_3$):} LLMs should handle qualitative risk assessment okay---spotting concentration, flagging overexposure. But I expect them to lose track of precise capital across sequential decisions because each prompt call is stateless. The portfolio state is just text in a prompt. The rule-based agent tracks capital with a running counter. No contest.
+\textbf{State tracking ($T_3$):} LLMs should handle qualitative risk assessment okay. Spotting concentration, flagging overexposure. But I expect them to lose track of precise capital across sequential decisions because each prompt call is stateless. Portfolio state is just text in a prompt. The rule-based agent tracks capital with a running counter. No contest.
 
-My headline prediction: LLMs help at the NLP layer, hurt at the quantitative layer. Net contribution to PnL depends on the ratio of language to math in the pipeline. This pipeline has more math than language.
+My headline prediction: LLMs help at the NLP layer, hurt at the quantitative layer. Net contribution to PnL depends on the ratio of language to math in the pipeline. This pipeline has more math than language. That probably means net negative.
 
 % ---- 7.3 Design Implications ----
 \subsection{Design Implications}
 \label{sec:implications}
 
-Even without real results the design points somewhere specific. LLMs for the language parts---matching, extracting information from news, interpreting ambiguous settlement rules. Deterministic code for everything with numbers---fee computation, edge calculation, position sizing, risk limits, order book parsing.
+Even without real results the design points somewhere specific. LLMs for matching, extracting information from news, interpreting ambiguous settlement rules. Deterministic code for everything with numbers: fee computation, edge calculation, position sizing, risk limits, order book parsing.
 
-This lines up with the tool-use paradigm from \citet{schick2023toolformer}: LLMs reason and plan, tools compute. Here the ``tools'' are the fee calculator, the order book parser, the Kelly sizing formula. The LLM's job is deciding whether two events match and interpreting qualitative information---news, settlement rules, regulatory changes. Everything that fits in a formula should be a formula.
+This lines up with the tool-use paradigm from \citet{schick2023toolformer}: LLMs reason and plan, tools compute. Here the ``tools'' are the fee calculator, the order book parser, the Kelly sizing formula. The LLM's job is deciding whether two events match and interpreting qualitative information like news, settlement rules, and regulatory changes. Everything that fits in a formula should be a formula.
 
 A concrete architecture:
 \begin{enumerate}
@@ -569,31 +569,31 @@ A concrete architecture:
   \item \textbf{Matching layer}: hybrid. Regex + SBERT + fuzzy for the easy 92\% of pairs, LLM for the 8\% ambiguous tail.
   \item \textbf{Detection layer}: rule-based. Fee computation, edge calculation, opportunity scoring.
   \item \textbf{Execution layer}: rule-based. Kelly sizing, position limits, stop-losses.
-  \item \textbf{Monitoring layer}: LLM. Summarize daily performance, flag weirdness, interpret news affecting open positions.
+  \item \textbf{Monitoring layer}: LLM. Summarize daily performance, flag anomalies, interpret news affecting open positions.
 \end{enumerate}
 
-LLM at stages 2 and 5. Stages 1, 3, and 4 are pure code. More complex than ``just use an LLM for everything,'' but should be more reliable and cheaper. Should be. Whether it actually is---well, that's what the experiments are for.
+LLM at layers 2 and 5. Layers 1, 3, 4 are pure code. More complex than ``just use an LLM for everything,'' but should be more reliable and cheaper. Should be. Whether it actually is, well. That is what the experiments are for.
 
 % ---- 7.4 Limitations ----
 \subsection{Limitations}
 \label{sec:limitations}
 
-The biggest limitation is obvious. Right now this is a design paper with synthetic validation. The theory works. The code runs. The pipeline handles fake data. But I don't have the numbers that matter---real matching accuracy, real LLM error rates, real PnL.
+I will start with the obvious one. Right now this is a design paper with synthetic validation. The theory works. The code runs. The pipeline handles fake data. But the numbers that matter, real matching accuracy, real LLM error rates, real PnL, are missing.
 
-My synthetic data understates difficulty in specific ways. I generate order books from parametric distributions: log-normal depth, uniform spreads. Real order books have fat tails, clustering, autocorrelation. Real markets are adversarial---market makers adapt to arb flow, widen spreads when they detect it, use information from one platform's book to update the other. My fake data doesn't capture any of that. Real markets are mean. My simulations are polite.
+My synthetic data understates difficulty in specific ways. I generate order books from parametric distributions: log-normal depth, uniform spreads. Real order books have fat tails, clustering, autocorrelation. Real markets are adversarial. Market makers adapt to arb flow. They widen spreads when they detect it. They use information from one platform's book to update the other. My simulations don't capture any of that. Polite simulations. Mean markets.
 
-I've tested against one mock LLM and zero real ones. GPT-4, Claude, Gemini---they've all got different training distributions. Maybe one of them handles the ceiling function fine. I doubt it, but I don't know. Multi-model evaluation is planned.
+I have tested against one mock LLM and zero real ones. GPT-4, Claude, Gemini all have different training distributions. Maybe one handles the ceiling function fine. I doubt it, but I don't know. Multi-model evaluation is planned.
 
-No execution risk modeling with real data. In production you'd hit rejected orders, partial fills, platform outages, API rate limits. Polymarket's CLOB has minimum order sizes and tick sizes I haven't tested against. I'm aware this matters. Haven't gotten there yet.
+No execution risk modeling with real data. In production you would hit rejected orders, partial fills, platform outages, API rate limits. Polymarket's CLOB has minimum order sizes and tick sizes I have not tested against. I am aware this matters. Have not gotten there yet.
 
-And there's the regulatory question looming over all of it. Kalshi is CFTC-regulated. Polymarket's primary interface operates from outside the United States, regulatory status ambiguous. Cross-platform arb between a regulated and unregulated venue raises legal questions for anyone in the U.S. that I don't address here. The technical pipeline works regardless. Deploying it is a different conversation, and not one I'm qualified to have.
+And then there is the regulatory question. Kalshi is CFTC-regulated. Polymarket's primary interface operates from outside the United States, regulatory status ambiguous. Cross-platform arb between a regulated and an unregulated venue raises legal questions for anyone in the U.S. that I do not address here. The technical pipeline works regardless of jurisdiction. Deploying it is a different conversation, and not one I am qualified to have.
 
 % ============================================================
 % ACKNOWLEDGMENTS
 % ============================================================
 \section*{Acknowledgments}
 
-Thanks to the prediction markets crowd on Twitter for putting fee structures, API docs, and arb strategies out in public. The open discussion of market microstructure on Kalshi and Polymarket is the reason this project exists.
+Thanks to the prediction markets crowd on Twitter who put fee structures, API docs, and arb strategies out in public. That open discussion of market microstructure on Kalshi and Polymarket is the reason this project exists. Also thanks to the USC Viterbi math department for not asking too many questions about why I was refreshing order books during office hours.
 
 % ============================================================
 % REFERENCES

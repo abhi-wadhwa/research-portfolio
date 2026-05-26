@@ -4,7 +4,7 @@
 
 \section{September 30, 2024}
 
-I slept through most of the weekend trying to catch up on everything. Hausdorff measure is still sitting in my head like an undigested meal, but we're moving on. Area and coarea formulas. These are the real payoff of Chapters 1--2.
+I slept through most of the weekend trying to catch up on everything. Hausdorff measure is still sitting in my head half-processed, but we are moving on. Area and coarea formulas. These are the real payoff of Chapters 1--2: the machinery we built starts producing actual geometric results.
 
 \subsection{Lipschitz Functions}
 \label{def:lipschitz}
@@ -18,7 +18,7 @@ A function $f : \R^n \to \R^m$ is \textbf{Lipschitz} if there exists a constant 
 The smallest such $L$ is denoted $\Lip(f)$.
 \end{definition}
 
-Why Lipschitz? Smooth maps are too restrictive for geometric measure theory, and continuous maps are too wild --- they can space-fill, for one thing. Lipschitz maps sit in between: differentiable a.e.\ (Rademacher), they send null sets to null sets, and they don't blow up Hausdorff measure too badly. The Goldilocks class.
+Why Lipschitz? Smooth maps are too restrictive for geometric measure theory, and continuous maps are too wild. Space-filling curves are continuous, for one thing. Lipschitz maps sit in between: differentiable a.e.\ by Rademacher, they send null sets to null sets, and they do not blow up Hausdorff measure by more than a controlled factor. The right class for most of what follows.
 
 \begin{theorem}[McShane Extension]
 \label{thm:mcshane}
@@ -30,21 +30,21 @@ The extension is explicit:
   \bar{f}(x) = \inf_{a \in A} \bigl\{ f(a) + L|x - a| \bigr\}.
 \]
 
-Check it satisfies the Lipschitz bound. Check it agrees with $f$ on $A$. Done. That's the whole proof. I love proofs that fit on an index card.
+Check it satisfies the Lipschitz bound. Check it agrees with $f$ on $A$. Done. That is the whole proof. It fits on an index card. Proofs like this are why I got into math instead of, I don't know, accounting.
 
-For vector-valued $f : A \to \R^m$, you apply McShane component by component, but the Lipschitz constant picks up a factor of $\sqrt{m}$. Nobody cares about the exact constant in practice.
+For vector-valued $f : A \to \R^m$, apply McShane component by component. The Lipschitz constant picks up a factor of $\sqrt{m}$. Nobody cares about the exact constant in practice.
 
 
 \subsection{Rademacher's Theorem}
 
-This is one of those results that sounds impossible the first time you hear it.
+This is one of those results that sounds impossible the first time.
 
 \begin{theorem}[Rademacher]
 \label{thm:rademacher}
 Let $f : \R^n \to \R^m$ be locally Lipschitz. Then $f$ is differentiable $\Ln$-a.e.
 \end{theorem}
 
-Every locally Lipschitz function has a classical derivative at almost every point. No extra hypotheses. The proof is long but every step is manageable on its own. It's the orchestration that's hard.
+Every locally Lipschitz function has a classical derivative at almost every point. No extra hypotheses. The proof is long. Each step is manageable on its own, but the orchestration is what I found hard. I tried to keep it all in my head while walking home from KAP and lost it by the time I got to Figueroa.
 
 \begin{proof}[Proof sketch (Evans--Gariepy, pp.~81--84)]
 It suffices to treat $f : \R^n \to \R$ (apply componentwise).
@@ -78,14 +78,14 @@ as $t \to 0$, \emph{uniformly in $v$}. This is the hardest part. Define the ``ba
 We want $\Ln(A_\epsilon) = 0$. At points where $\nabla f$ exists and equals some linear map $L$, compare $f(x + tv) - f(x)$ against $L \cdot (tv)$ using the Lipschitz bound. A covering argument (Vitali, from a few lectures ago) shows the set where uniform convergence fails has measure zero. The uniform bound $|Q| \leq 2\Lip(f)$ is what makes the covering argument work.
 \end{proof}
 
-Long proof. But worth it.
+Long proof. Worth it though.
 
 \begin{corollary}
 \label{cor:lip-zero-deriv}
 If $f : \R^n \to \R^m$ is Lipschitz and $f = 0$ on a set $Z$, then $Df = 0$ $\Ln$-a.e.\ on $Z$.
 \end{corollary}
 
-This follows immediately: at a.e.\ point of $Z$ where $f$ is differentiable, the derivative has to be zero because $f$ vanishes on $Z$ and $Z$ has full density at such points.
+Immediate: at a.e.\ point of $Z$ where $f$ is differentiable, the derivative has to vanish because $f$ vanishes on $Z$ and $Z$ has full density at such points.
 
 We also get a chain rule: if $f$ and $g$ are Lipschitz and the composition makes sense, $D(g \circ f) = Dg \circ Df$ a.e. Standard.
 
@@ -120,13 +120,13 @@ Let $L : \R^n \to \R^m$ be linear with $n \leq m$, and let $A \subset \R^n$ be L
 \]
 \end{lemma}
 
-So for injective linear maps, $L$ scales $n$-dimensional volume by exactly $J_L$. The area formula generalizes this to Lipschitz maps.
+Injective linear maps scale $n$-dimensional volume by exactly $J_L$. The area formula generalizes this to Lipschitz maps.
 
 
 \subsection{The Area Formula}
 \label{thm:area-formula}
 
-This is the whole reason we defined Lipschitz maps and Jacobians.
+This is the whole reason we defined Lipschitz maps and Jacobians. Everything before was setup.
 
 \begin{theorem}[Area Formula (Evans--Gariepy, Thm.~1, p.~96)]
 \label{thm:area}
@@ -143,7 +143,7 @@ When $g = \chi_A$ for some measurable $A$, this becomes
 which says the integral of the Jacobian over $A$ equals the integral of the number of preimages, counted with Hausdorff measure. When $f$ is injective on $A$, the right side collapses to $\Hn(f(A))$.
 
 \begin{proof}[Proof sketch (pp.~96--101)]
-Here's the architecture.
+Here is the architecture.
 
 \medskip
 \noindent\textbf{Step 1: Reduce to $g = \chi_A$.}
@@ -168,10 +168,10 @@ On each $E_k$, $f$ behaves like a linear map up to error $\epsilon$, so the Jaco
 
 \medskip
 \noindent\textbf{Step 5: Non-injectivity.}
-The counting function $y \mapsto \#(A \cap f^{-1}(\{y\}))$ is measurable (this isn't obvious; it follows from a structure theorem for Lipschitz maps). The multiplicity on the right accounts for non-injectivity.
+The counting function $y \mapsto \#(A \cap f^{-1}(\{y\}))$ is measurable (this is not obvious; it follows from a structure theorem for Lipschitz maps). The multiplicity on the right accounts for non-injectivity.
 \end{proof}
 
-The decomposition in Step~4 sometimes goes by ``Lipschitz linearization.'' It shows up everywhere in GMT. Lipschitz maps are well-approximated by their derivatives, and the error is controlled uniformly on compact subsets where the derivative doesn't vary much. I confused myself for an hour by trying to do Step~4 globally instead of on the pieces $E_k$. Don't do that.
+The decomposition in Step~4 goes by ``Lipschitz linearization.'' It shows up everywhere in GMT. Lipschitz maps are well-approximated by their derivatives, and the error is controlled uniformly on compact subsets where the derivative varies little. I confused myself for an hour by trying to do Step~4 globally instead of on the pieces $E_k$. Do not do that. The global linearization fails because the derivative is only approximately constant, and the approximation error accumulates without the decomposition to contain it.
 
 
 \subsection{Surface area as an application}
@@ -180,23 +180,23 @@ Let $U \subset \R^n$ be open and $f : U \to \R^m$ a Lipschitz parametrization of
 \[
   \Hn(\Sigma) = \int_U J_f(x) \, dx,
 \]
-provided $f$ is injective (or counting multiplicity if it isn't). For a graph $f(x) = (x, u(x))$ where $u : \R^n \to \R$, we get
+provided $f$ is injective (or counting multiplicity if not). For a graph $f(x) = (x, u(x))$ where $u : \R^n \to \R$, we get
 \[
   J_f(x) = \sqrt{1 + |\nabla u(x)|^2},
 \]
-which recovers the classical surface area formula from multivariable calculus. Kind of wild how much machinery goes into justifying something you learn in vector calculus as a given.
+which recovers the classical surface area formula from multivariable calculus. Six chapters of Evans machinery to justify something you learn in Math 226 as a given. Worth it? Ask me in December.
 
 
 
 \section{October 2, 2024}
 
-Midterm season. I've been living off coffee and the vending machine on the third floor of Kaprielian Hall. Today we finish Chapter 3 with the coarea formula.
+Midterm season. I have been living off coffee and the vending machine on the third floor of KAP. Today we finish Chapter 3 with the coarea formula.
 
 \subsection{The Coarea Formula}
 
-I found this harder to internalize than the area formula. Something about integrating over level sets instead of over the image makes the geometry less visual for me.
+I found this harder to internalize than the area formula. Integrating over level sets instead of over the image makes the geometry less visual for me. I can draw the area formula on a napkin. The coarea formula I cannot.
 
-The area formula handles $n \leq m$: a low-dimensional domain mapping into a higher-dimensional space. The coarea formula handles $n \geq m$: a high-dimensional domain mapping \emph{down} to a lower-dimensional space. The level sets $f^{-1}(\{y\})$ are generically $(n-m)$-dimensional, and we integrate over them.
+The area formula handles $n \leq m$: a low-dimensional domain mapping into a higher-dimensional space. The coarea formula handles $n \geq m$: a high-dimensional domain mapping \emph{down}. The level sets $f^{-1}(\{y\})$ are generically $(n-m)$-dimensional, and we integrate over them.
 
 \begin{theorem}[Coarea Formula (Evans--Gariepy, Thm.~2, p.~112)]
 \label{thm:coarea}
@@ -211,16 +211,16 @@ The outer integral on the right is over $\R^m$ with Lebesgue measure. The inner 
 
 \subsection{Why this is a nonlinear Fubini theorem}
 
-Take $n = n_1 + n_2$, $m = n_2$, and let $f : \R^{n_1} \times \R^{n_2} \to \R^{n_2}$ be the projection $f(x_1, x_2) = x_2$. Then $Df$ is the projection matrix, $J_f = 1$, and each level set $f^{-1}(\{y\})$ is just $\R^{n_1} \times \{y\}$. The coarea formula becomes
+Take $n = n_1 + n_2$, $m = n_2$, and let $f : \R^{n_1} \times \R^{n_2} \to \R^{n_2}$ be the projection $f(x_1, x_2) = x_2$. Then $Df$ is the projection matrix, $J_f = 1$, and each level set $f^{-1}(\{y\})$ is $\R^{n_1} \times \{y\}$. The coarea formula becomes
 \[
   \int_{\R^n} g(x) \, dx = \int_{\R^{n_2}} \left( \int_{\R^{n_1}} g(x_1, y) \, dx_1 \right) dy,
 \]
-which is Fubini. So the coarea formula is a genuinely nonlinear version of Fubini's theorem. That's a nice way to think about it.
+which is Fubini. So the coarea formula generalizes Fubini to nonlinear ``projections.'' That actually is a nice way to think about it, and it is the viewpoint that finally made the formula click for me.
 
 
 \subsection{The case $m = 1$}
 
-This is the most common special case and I kept getting confused about it until I worked through three examples by hand. Let $f : \R^n \to \R$ be Lipschitz. Then $J_f = |\nabla f|$. The coarea formula becomes
+The most common special case. Let $f : \R^n \to \R$ be Lipschitz. Then $J_f = |\nabla f|$. The coarea formula becomes
 \[
   \int_{\R^n} g(x) \, |\nabla f(x)| \, dx = \int_{-\infty}^{\infty} \left( \int_{f^{-1}(\{t\})} g \, d\mathcal{H}^{n-1} \right) dt.
 \]
@@ -229,7 +229,7 @@ Taking $g = \chi_A / |\nabla f|$ where $\nabla f \neq 0$:
 \[
   \Ln(A) = \int_{-\infty}^{\infty} \int_{A \cap \{f = t\}} \frac{1}{|\nabla f|} \, d\mathcal{H}^{n-1} \, dt.
 \]
-This ``slices'' the set $A$ by level sets of $f$ and reconstructs its volume. Incredibly useful in PDE and geometric analysis.
+This ``slices'' the set $A$ by level sets of $f$ and reconstructs its volume. It shows up constantly in PDE and geometric analysis. We will need it in Chapter~5 for the BV coarea formula.
 
 
 \subsection{Proof sketch of the coarea formula}
@@ -243,11 +243,11 @@ For a surjective linear map $L : \R^n \to \R^m$, verify that
 \[
   J_L \cdot \Ln(A) = \int_{\R^m} \mathcal{H}^{n-m}(A \cap L^{-1}(\{y\})) \, dy
 \]
-for all measurable $A$. The level sets of $L$ are translates of $\ker L$, an $(n-m)$-dimensional subspace. So we're computing volume via ``height times cross-section,'' weighted by the Jacobian. Use the polar decomposition and compute.
+for all measurable $A$. The level sets of $L$ are translates of $\ker L$, an $(n-m)$-dimensional subspace. So we are computing volume via ``height times cross-section,'' weighted by the Jacobian. Use the polar decomposition and compute.
 
 \medskip
 \noindent\textbf{Step 2: Handle $\{J_f = 0\}$.}
-Where $J_f(x) = 0$, the map $Df(x)$ isn't surjective. Show that for a.e.\ $y \in \R^m$, the set $\{J_f = 0\} \cap f^{-1}(\{y\})$ has $\mathcal{H}^{n-m}$-measure zero. This uses Sard-type estimates: $f(\{J_f = 0\})$ has $\Lm$-measure zero. That's Sard's theorem for Lipschitz maps, which is nontrivial.
+Where $J_f(x) = 0$, the map $Df(x)$ is not surjective. Show that for a.e.\ $y \in \R^m$, the set $\{J_f = 0\} \cap f^{-1}(\{y\})$ has $\mathcal{H}^{n-m}$-measure zero. This uses Sard-type estimates: $f(\{J_f = 0\})$ has $\Lm$-measure zero. That is Sard's theorem for Lipschitz maps, which is nontrivial.
 
 \medskip
 \noindent\textbf{Step 3: Lipschitz linearization.}
@@ -258,7 +258,7 @@ Same trick as the area formula. Decompose $\R^n$ into pieces where $Df$ is nearl
 Verify that $y \mapsto \int_{f^{-1}(\{y\})} g \, d\mathcal{H}^{n-m}$ is measurable. Follows from the theory of rectifiable sets and the structure of Lipschitz level sets.
 \end{proof}
 
-The proof is honestly harder than the area formula. The difficulty is in Step~2: understanding the critical set and how it interacts with level sets. Sard's theorem for smooth maps is standard, but the Lipschitz version requires more care. A slog, but the result is clean.
+The proof is harder than the area formula's, at least for me. The difficulty concentrates in Step~2: the critical set and how it interacts with level sets. Sard's theorem for smooth maps is standard differential topology (Milnor proves it in half a page for the $C^\infty$ case). The Lipschitz version requires more care, and Evans spends about two pages on it.
 
 \begin{corollary}
 \label{cor:coarea-perimeter}
@@ -269,6 +269,6 @@ Let $u : \R^n \to \R$ be Lipschitz. Then for a.e.\ $t \in \R$, the level set $\{
 for every bounded measurable $A$.
 \end{corollary}
 
-This comes from the coarea formula with $g = \chi_A$ and the bound $|\nabla u| \leq \Lip(u)$. It tells us ``most'' level sets of a Lipschitz function are nice $(n-1)$-dimensional surfaces. The bad ones form a null set in the target. This connects directly to the theory of sets of finite perimeter later on.
+This comes from the coarea formula with $g = \chi_A$ and $|\nabla u| \leq \Lip(u)$. It tells us ``most'' level sets of a Lipschitz function are $(n-1)$-dimensional surfaces with finite measure. The bad ones form a null set in the target. This connects to sets of finite perimeter in Chapter~5.
 
-I still don't have good intuition for why the coarea formula involves the Jacobian of the gradient rather than, say, the determinant of the full derivative. I think it's because the Jacobian measures how much $f$ ``spreads'' in the directions transverse to the level sets, and the component of $Df$ along the level sets doesn't contribute to the slicing. But I'm handwaving.
+I still do not have sharp intuition for why the coarea formula involves the Jacobian of the gradient rather than the determinant of the full derivative. I think the Jacobian measures how much $f$ ``spreads'' transverse to the level sets, and the component of $Df$ along the level sets is irrelevant to the slicing. But that explanation is handwavy and I would not put it on an exam.

@@ -4,7 +4,7 @@
 
 \section{October 7, 2024}
 
-Rain all morning. The walk to class was miserable but at least the topic is good. We're starting Sobolev spaces, which is where analysis starts feeling like it has teeth.
+Rain all morning. The walk from my apartment on 30th Street to KAP was miserable but at least the topic is good. We are starting Sobolev spaces, which is where analysis starts having direct contact with PDE.
 
 \subsection{Weak Derivatives}
 
@@ -17,9 +17,9 @@ Let $U \subseteq \R^n$ be open. Suppose $u, v \in L^1_{\mathrm{loc}}(U)$. We say
 for all test functions $\varphi \in C^\infty_c(U)$.
 \end{definition}
 
-Here's the idea. You move all the derivatives onto the smooth test function via integration by parts, then \emph{define} the derivative of $u$ to be whatever $v$ makes the identity work. If $u$ happens to be classically differentiable, you get the usual derivative back. But now functions with corners, kinks, jumps in their derivatives --- all fair game.
+The idea: move all the derivatives onto the smooth test function via integration by parts, then \emph{define} the derivative of $u$ to be whatever $v$ makes the identity work. If $u$ happens to be classically differentiable, you recover the usual derivative. But now functions with corners and kinks are fair game. The absolute value function $|x|$ on $\R$ has weak derivative $\mathrm{sgn}(x)$, which is not a classical derivative at $0$ but works perfectly in the weak sense.
 
-Weak derivatives are unique up to a.e.\ equivalence. That's the fundamental lemma of the calculus of variations, nothing more.
+Weak derivatives are unique up to a.e.\ equivalence. That is the fundamental lemma of the calculus of variations, nothing more.
 
 
 \subsection{Sobolev Spaces}
@@ -38,18 +38,18 @@ The norm:
     \end{cases}
 \]
 
-$W^{k,p}(U)$ is a Banach space. For $p = 2$ it's a Hilbert space, usually written $H^k(U)$.
+$W^{k,p}(U)$ is a Banach space. For $p = 2$ it is a Hilbert space, usually written $H^k(U)$.
 
-$W^{k,p}_0(U)$ is the closure of $C^\infty_c(U)$ in $W^{k,p}(U)$. Think of these as Sobolev functions that ``vanish on $\partial U$'' in some appropriate sense.
+$W^{k,p}_0(U)$ is the closure of $C^\infty_c(U)$ in $W^{k,p}(U)$. Think of these as Sobolev functions that ``vanish on $\partial U$'' in some appropriate sense. We will make that precise with traces later.
 
 Product rules and chain rules work. If $u \in W^{1,p}(U)$ and $\Phi \in C^1$ with $\Phi'$ bounded, then $\Phi \circ u \in W^{1,p}(U)$ and $D(\Phi \circ u) = \Phi'(u) Du$.
 
-One thing that confused me early on: $W^{k,p}(U)$ is \emph{not} just ``$C^k$ functions completed in the $W^{k,p}$ norm.'' That completion starting from $C^\infty_c$ gives you $W^{k,p}_0$, which is a different space. You genuinely need the weak derivative definition.
+One thing that confused me for a while: $W^{k,p}(U)$ is \emph{not} just ``$C^k$ functions completed in the $W^{k,p}$ norm.'' That completion starting from $C^\infty_c$ gives $W^{k,p}_0$, which is a different, smaller space. You need the weak derivative definition to get $W^{k,p}$ itself.
 
 
 \subsection{Approximation by Smooth Functions}
 
-The mollification proof is the template for everything in this chapter. Learn it once and you're set.
+The mollification argument is the template for everything in this chapter. Learn it once and you are set for all the approximation results.
 
 \begin{definition}[Mollifier]
 Let $\eta \in C^\infty_c(\R^n)$ be the standard mollifier with $\eta \geq 0$, $\operatorname{spt} \eta \subseteq B(0,1)$, and $\int \eta = 1$. Set $\eta_\varepsilon(x) = \varepsilon^{-n} \eta(x/\varepsilon)$.
@@ -73,7 +73,7 @@ Now the local-to-global step.
 $C^\infty(U) \cap W^{k,p}(U)$ is dense in $W^{k,p}(U)$ for $1 \leq p < \infty$.
 \end{theorem}
 
-The proof uses a partition of unity subordinate to an exhaustion of $U$. You mollify each piece with a small enough $\varepsilon$ and sum. It's a careful $\varepsilon/2^k$ argument, nothing deep, but you have to track the supports.
+The proof uses a partition of unity subordinate to an exhaustion of $U$. Mollify each piece with a small enough $\varepsilon$ and sum. It is a careful $\varepsilon/2^k$ argument, not deep, but you have to track the supports. I messed up the support tracking the first time and got nonsense.
 
 Can you approximate by $C^\infty(\overline{U})$ functions? In general, no.
 
@@ -82,19 +82,19 @@ Can you approximate by $C^\infty(\overline{U})$ functions? In general, no.
 If $\partial U$ is Lipschitz, then $C^\infty(\overline{U})$ is dense in $W^{k,p}(U)$ for $1 \leq p < \infty$.
 \end{theorem}
 
-The Lipschitz condition lets you locally flatten the boundary and push the function slightly inward, where you can mollify safely. Without it, you can build domains where the approximation fails.
+The Lipschitz condition lets you locally flatten the boundary and push the function slightly inward, where mollification is safe. Without it, you can build domains where the approximation fails. (Think of a domain with an inward cusp.)
 
-Three approximation theorems, each stronger, each needing more hypotheses. I had to draw a diagram to keep them straight.
+Three approximation theorems, each stronger, each needing more hypotheses. I drew a diagram to keep them straight. Local $\to$ Meyers--Serrin $\to$ boundary.
 
 
 
 \section{October 9, 2024}
 
-Office hours ran long yesterday so I didn't get to review traces before today. Walking in blind.
+Office hours ran long yesterday so I did not review traces before today. Walking in blind.
 
 \subsection{Traces}
 
-For smooth functions $u \in C^\infty(\overline{U})$, restricting to $\partial U$ is trivial. For Sobolev functions you can't just ``evaluate on the boundary'' because they're only defined a.e. The trace operator fixes this.
+For smooth $u \in C^\infty(\overline{U})$, restricting to $\partial U$ is trivial. For Sobolev functions you cannot just ``evaluate on the boundary'' because they are only defined a.e. But does the boundary even have positive measure? No. It has $\mathcal{L}^n$-measure zero. So restriction makes no sense without more work.
 
 \begin{theorem}[Trace theorem]
 \label{thm:trace}
@@ -105,9 +105,9 @@ Assume $U$ is bounded and $\partial U$ is Lipschitz. There exists a bounded line
 such that $Tu = u|_{\partial U}$ for $u \in W^{1,p}(U) \cap C(\overline{U})$, and $\|Tu\|_{L^p(\partial U)} \leq C \|u\|_{W^{1,p}(U)}$.
 \end{theorem}
 
-The trace characterizes $W^{1,p}_0(U)$: a function $u \in W^{1,p}(U)$ belongs to $W^{1,p}_0(U)$ if and only if $Tu = 0$ on $\partial U$. So $W^{1,p}_0$ really is the space of Sobolev functions vanishing at the boundary, exactly as the notation suggests.
+The trace characterizes $W^{1,p}_0(U)$: $u \in W^{1,p}(U)$ belongs to $W^{1,p}_0(U)$ if and only if $Tu = 0$ on $\partial U$. So $W^{1,p}_0$ really is the space of Sobolev functions vanishing at the boundary.
 
-The sharper statement is that $T$ maps into the fractional Sobolev space $W^{1-1/p, p}(\partial U)$, but Evans--Gariepy don't go there.
+The sharper statement is that $T$ maps into the fractional Sobolev space $W^{1-1/p, p}(\partial U)$. Evans and Gariepy do not go there. I looked it up in Adams and Fournier (Section 7.57) and decided I did not need it yet.
 
 
 \subsection{Extensions}
@@ -126,15 +126,15 @@ such that $Eu = u$ a.e.\ in $U$, $\operatorname{spt}(Eu)$ is bounded, and
 
 Near the boundary, reflect the function across $\partial U$. Because $\partial U$ is Lipschitz, you can locally flatten it, reflect, then patch with a partition of unity. Multiply by a cutoff for bounded support.
 
-Extensions matter because lots of results are easier to prove on all of $\R^n$ with no boundary issues. Then you transfer back via $E$. The Sobolev inequalities are the prime example.
+Extensions matter because lots of results are easier on all of $\R^n$ where there are no boundary issues. Prove it on $\R^n$, then transfer back via $E$. The Sobolev inequalities below are the prime example.
 
 
 \subsection{Gagliardo--Nirenberg--Sobolev ($p < n$)}
 \label{thm:GNS}
 
-This is the heart of the chapter. The notation is brutal and I won't apologize for it.
+This is the heart of the chapter. The notation is brutal.
 
-The exponent $p^* = np/(n-p)$ looks arbitrary until you do dimensional analysis. $\|u\|_{L^q}$ has dimensions of $(\text{length})^{n/q}$ times pointwise size, and $\|Du\|_{L^p}$ has dimensions of $(\text{length})^{n/p - 1}$ times pointwise size. For the inequality to be scale-invariant, we need $n/q = n/p - 1$, giving $q = np/(n-p) = p^*$. That's the only exponent that works.
+The exponent $p^* = np/(n-p)$ looks arbitrary until you do dimensional analysis. $\|u\|_{L^q}$ has dimensions of $(\text{length})^{n/q}$ times pointwise size, and $\|Du\|_{L^p}$ has dimensions of $(\text{length})^{n/p - 1}$ times pointwise size. For the inequality to be scale-invariant, we need $n/q = n/p - 1$, giving $q = np/(n-p) = p^*$. That is the only exponent that works. I wish Evans had explained this instead of just writing down $p^*$ and moving on.
 
 \begin{theorem}[Gagliardo--Nirenberg--Sobolev]
 \label{thm:gns}
@@ -145,7 +145,7 @@ Assume $1 \leq p < n$. There exists $C = C(p,n)$ such that
 for all $u \in C^1_c(\R^n)$, where $p^* = \dfrac{np}{n-p}$.
 \end{theorem}
 
-The right-hand side only involves $Du$, not $u$ itself. That's because we're on all of $\R^n$ with compactly supported functions.
+The right-hand side only involves $Du$, not $u$ itself. Because we are on all of $\R^n$ with compactly supported functions.
 
 By density this extends to $W^{1,p}(\R^n)$, and via the extension operator to bounded domains with Lipschitz boundary:
 \[
@@ -176,14 +176,14 @@ Assume $n < p \leq \infty$. There exists $C = C(p,n)$ such that
 for all $u \in C^1_c(\R^n)$, where $\gamma = 1 - n/p$.
 \end{theorem}
 
-So $W^{1,p}(U) \hookrightarrow C^{0,1-n/p}(\overline{U})$ for $p > n$. One derivative in $L^p$ with $p$ large enough, and the function \emph{has} to be H\"older continuous. As $p \to \infty$, $\gamma \to 1$ and you approach Lipschitz. As $p \to n^+$, $\gamma \to 0$ and you just barely get continuity.
+So $W^{1,p}(U) \hookrightarrow C^{0,1-n/p}(\overline{U})$ for $p > n$. One derivative in $L^p$ with $p$ large enough, and the function \emph{has} to be H\"older continuous. As $p \to \infty$, $\gamma \to 1$ and you approach Lipschitz. As $p \to n^+$, $\gamma \to 0$ and you barely get continuity.
 
-The proof integrates $|u(x) - u(y)|$ along line segments, switches to polar coordinates, and applies H\"older's inequality. The key geometric observation: the average of $|Du|$ over a ball controls the oscillation of $u$.
+The proof integrates $|u(x) - u(y)|$ along line segments, switches to polar coordinates, and applies H\"older's inequality. The key observation: the average of $|Du|$ over a ball controls the oscillation of $u$. I worked through this proof line by line and it is one of the most satisfying computations in the book.
 
 
 \subsection{The borderline $p = n$}
 
-The case $p = n$ is subtle. You don't get $L^\infty$ (that would be Morrey, but $p = n$ doesn't satisfy $p > n$), and $p^* = np/(n-p)$ blows up. What you get is $W^{1,n}(U) \hookrightarrow L^q(U)$ for all $q < \infty$, but \emph{not} $q = \infty$. Almost there, but not quite.
+$p = n$ is subtle. You do not get $L^\infty$ (that would require $p > n$), and $p^* = np/(n-p)$ blows up. What you get is $W^{1,n}(U) \hookrightarrow L^q(U)$ for all $q < \infty$, but \emph{not} $q = \infty$. Almost $L^\infty$, but not quite. Trudinger's inequality gives an exponential integrability result, but Evans does not cover it.
 
 
 \subsection{Embedding summary}
@@ -208,12 +208,12 @@ The dimension $n$ is the threshold. Everything turns on whether $p$ is below, at
 
 \section{October 14, 2024}
 
-I think I finally understand the Sobolev embeddings. It only took three passes through the proofs. My handwritten notes from the first pass are unreadable garbage. Today we do compactness, capacity, and the fine properties of Sobolev functions.
+I think I finally understand the Sobolev embeddings. Three passes through the proofs did it. My handwritten notes from the first pass are unreadable garbage; Brian's are worse. Today: compactness, capacity, and the fine properties of Sobolev functions.
 
 \subsection{Rellich--Kondrachov Compactness}
 \label{thm:rellich-kondrachov}
 
-This is Arzel\`a--Ascoli for Sobolev spaces.
+Arzel\`a--Ascoli for Sobolev spaces.
 
 \begin{theorem}[Rellich--Kondrachov]
 \label{thm:rellich}
@@ -226,18 +226,18 @@ Assume $U \subset \R^n$ is bounded and open with Lipschitz boundary. Then:
 Here $\hookrightarrow\hookrightarrow$ means compact embedding: bounded sequences have convergent subsequences.
 \end{theorem}
 
-Notice the strict inequalities. You get compactness into $L^q$ for $q < p^*$, but \emph{not} at the critical exponent $q = p^*$. The embedding $W^{1,p} \hookrightarrow L^{p^*}$ is continuous but not compact. This matters enormously in the calculus of variations --- if you've ever heard someone say ``loss of compactness at the critical exponent,'' this is what they mean.
+Notice the strict inequalities. You get compactness into $L^q$ for $q < p^*$, but \emph{not} at the critical exponent $q = p^*$. The embedding $W^{1,p} \hookrightarrow L^{p^*}$ is continuous but not compact. This matters enormously in the calculus of variations. If you have ever heard someone say ``loss of compactness at the critical exponent,'' this is the theorem behind it.
 
 \begin{proof}[Proof idea for case (1)]
 Take a bounded sequence $(u_k)$ in $W^{1,p}(U)$. Extend to $\R^n$, then mollify. For fixed $\varepsilon > 0$, the mollified sequence $(u_k^\varepsilon)$ is bounded in $C^1$ on compact sets (from the $W^{1,p}$ bound and properties of convolution), so Arzel\`a--Ascoli gives a convergent subsequence. Diagonal argument over $\varepsilon \to 0$. The $q < p^*$ restriction enters because you need spare integrability to interpolate between $L^1$ convergence of mollifications and the $L^{p^*}$ bound.
 \end{proof}
 
-I won't pretend I understand every detail of the interpolation step. The mechanism is: Sobolev regularity gives equicontinuity after mollification, Arzel\`a--Ascoli gives convergence, interpolation gives $L^q$ convergence for subcritical $q$.
+I will not pretend I understand every detail of the interpolation step. The mechanism is: Sobolev regularity gives equicontinuity after mollification, Arzel\`a--Ascoli gives convergence in $C^0$, interpolation converts that to $L^q$ convergence for subcritical $q$. The interpolation inequality used is H\"older's applied to $|u_k - u_j|^q = |u_k - u_j|^\theta \cdot |u_k - u_j|^{q - \theta}$ with the right splitting.
 
 
 \subsection{Capacity}
 
-Capacity confused me for weeks. Here's what I eventually understood: sets of capacity zero are the sets that Sobolev functions can't ``see.'' Measure zero sets are invisible to $L^p$ functions. Capacity zero sets are invisible to Sobolev functions. But capacity zero is a \emph{finer} notion --- there are measure-zero sets with positive capacity.
+Capacity confused me for weeks. Here is what I eventually worked out: sets of capacity zero are the sets that Sobolev functions cannot ``see.'' Measure zero sets are invisible to $L^p$ functions. Capacity zero sets are invisible to $W^{1,p}$ functions. Capacity zero is a \emph{finer} notion. There are measure-zero sets with positive capacity.
 
 \begin{definition}[$p$-capacity]
 \label{def:p-capacity}
@@ -255,12 +255,12 @@ Properties:
     \item $\operatorname{cap}_p(A) = 0 \implies \mathcal{L}^n(A) = 0$, but not conversely.
 \end{enumerate}
 
-The relationship to Hausdorff measure is the one that matters most in practice. It tells you the dimension of the exceptional set where Sobolev functions can misbehave.
+Property (3) is the one that matters most in practice. It tells you the dimension of the exceptional set where Sobolev functions can misbehave. For $p = 2$ in $\R^3$, the exceptional set has Hausdorff dimension at most $3 - 2 = 1$, so it can be at worst a curve.
 
 
 \subsection{Quasicontinuity and Precise Representatives}
 
-A Sobolev function is only defined a.e., so talking about pointwise values is dangerous. But you can choose a representative that's well-behaved outside an arbitrarily small set in the capacity sense.
+A Sobolev function is only defined a.e., so talking about pointwise values is dangerous. But you can choose a representative that is well-behaved outside an arbitrarily small set in the capacity sense.
 
 \begin{definition}[Quasicontinuous]
 \label{def:quasicontinuous}
@@ -272,20 +272,20 @@ A function $u : U \to \R$ is \textbf{$p$-quasicontinuous} if for every $\varepsi
 Every $u \in W^{1,p}(\R^n)$ ($1 \leq p \leq n$) has a $p$-quasicontinuous representative $\tilde{u}$, unique up to sets of $\operatorname{cap}_p$-zero.
 \end{theorem}
 
-Sobolev functions are ``almost continuous.'' The discontinuity set can be made as small as you want in the capacity sense. Not continuous. Not just measurable. Quasicontinuous --- that's the right notion of regularity for these functions.
+Sobolev functions are ``almost continuous.'' The discontinuity set can be made as small as you want in the capacity sense. Not continuous. Not merely measurable. Quasicontinuous. That is the correct regularity notion for these functions.
 
 The \textbf{precise representative} is defined pointwise:
 \[
     u^*(x) = \lim_{r \to 0} \fint_{B(x,r)} u \, dy,
 \]
-whenever this limit exists. For $u \in W^{1,p}$, $u^*$ exists and equals $\tilde{u}$ outside a set of $\operatorname{cap}_p$-zero.
+whenever this limit exists. For $u \in W^{1,p}$, the limit $u^*$ exists and equals $\tilde{u}$ outside a set of $\operatorname{cap}_p$-zero.
 
-This connects back to the differentiation of measures stuff from the Vitali covering lectures. Same idea of recovering pointwise information from integral averages, but now the exceptional set is measured by capacity instead of Hausdorff measure.
+This connects back to the differentiation-of-measures machinery from the Vitali covering lectures. Same idea: recover pointwise information from integral averages. But the exceptional set is measured by capacity instead of Hausdorff measure.
 
 
 \subsection{Differentiability on Lines}
 
-Here's an equivalent way to think about Sobolev functions that avoids integration by parts entirely.
+An equivalent way to think about Sobolev functions that avoids integration by parts entirely.
 
 \begin{theorem}
 \label{thm:diff-lines}
@@ -294,4 +294,4 @@ If $u \in W^{1,p}(U)$ for $1 \leq p \leq \infty$, then for each $i = 1, \ldots, 
 
 The converse is also true: if $u \in L^p(U)$ is absolutely continuous on a.e.\ line in each coordinate direction, and the classical partials are in $L^p$, then $u \in W^{1,p}(U)$.
 
-Sobolev functions are exactly the $L^p$ functions that are absolutely continuous on almost every axis-parallel line. Clean characterization. Brian asked me why you can't just use this as the definition from the start. I think you could, honestly, but the integration-by-parts version plays better with the PDE applications.
+So Sobolev functions are exactly the $L^p$ functions that are absolutely continuous on almost every axis-parallel line. Brian asked me why you can not just use this as the definition. You could. But the integration-by-parts definition plays better with PDE applications, and it generalizes to fractional and negative-order Sobolev spaces where ACL makes no sense. Still, the ACL characterization is the most concrete way to picture what a Sobolev function looks like.
