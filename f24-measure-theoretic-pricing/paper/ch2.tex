@@ -5,10 +5,10 @@
 \section{September 16, 2024}\label{sec:lec6}
 
 Brian asked me over lunch what Hausdorff measure even \emph{is}, and my
-attempt to explain it convinced me I didn't understand the definition as
-well as I thought. So let's be careful.
+attempt to explain it made me realize I didn't understand the definition as
+well as I thought. Humbling.
 
-The big idea: Lebesgue measure only ``sees'' $n$-dimensional things in
+Here's the problem. Lebesgue measure only ``sees'' $n$-dimensional things in
 $\R^n$. If you want to measure a curve in $\R^3$, or the surface of a
 sphere, or a fractal, you need something that can handle non-integer
 dimensions. That's Hausdorff measure.
@@ -33,7 +33,7 @@ where $\alpha(s) = \pi^{s/2}/\Gamma(s/2+1)$ is the normalization constant
 chosen so that $\mathcal{H}^n$ agrees with $\mathcal{L}^n$.
 \end{definition}
 
-I keep forgetting the normalization. Writing it down one more time:
+I keep forgetting the normalization. Let me write it down one more time:
 $\alpha(n) = \pi^{n/2}/\Gamma(n/2+1)$. For integer $n$ this is the volume
 of the unit ball in $\R^n$. So $\alpha(1) = 2$, $\alpha(2) = \pi$,
 $\alpha(3) = 4\pi/3$.
@@ -50,8 +50,8 @@ is non-decreasing as $\delta \to 0$: shrinking $\delta$ restricts the
 admissible covers.
 \end{definition}
 
-So as $\delta$ shrinks, we force covers to use smaller sets, which can
-only make the infimum larger. Clean.
+As $\delta$ shrinks, we force covers to use smaller sets, which can
+only make the infimum larger.
 
 \begin{remark}\label{rem:hausdorff-sanity}
 Some sanity checks:
@@ -103,7 +103,7 @@ $\mathcal{H}^s(A) < \infty$. Part (ii) is the contrapositive. \qedhere
 \end{proof}
 
 So there's a critical value of $s$ where $\mathcal{H}^s$ jumps from
-$+\infty$ to $0$. That value is the Hausdorff dimension.
+$+\infty$ to $0$.
 
 \begin{definition}[Hausdorff dimension]\label{def:hausdorff-dim}
 \[
@@ -116,7 +116,7 @@ $+\infty$ to $0$. That value is the Hausdorff dimension.
 At the critical dimension itself, $\mathcal{H}^s(A)$ can be $0$, $\infty$,
 or anything in between. The middle-thirds Cantor set has
 $\dim_\mathcal{H} = \log 2 / \log 3$ and its Hausdorff measure at that
-dimension is $1$. That's special --- most sets aren't so nice.
+dimension is $1$. That's special --- most sets aren't so well-behaved.
 
 Some examples:
 \begin{itemize}[nosep]
@@ -129,10 +129,10 @@ Some examples:
 \end{itemize}
 
 I tried computing $\mathcal{H}^{\log 2/\log 3}$ of the Cantor set
-directly but got confused by the covering argument. The upper bound is
+directly but got tangled in the covering argument. The upper bound is
 easy (use the $2^k$ remaining intervals at level $k$), but the lower bound
 needs more care --- you have to show those ``natural'' covers are actually
-optimal. I don't really get the intuition yet.
+optimal. I still don't have the intuition for that.
 
 TODO: work through the Cantor set dimension calculation carefully. Check
 Rogers's book for the density argument.
@@ -141,9 +141,8 @@ Rogers's book for the density argument.
 % ===========================================================================
 \section{September 18, 2024}\label{sec:lec7}
 
-The highlight of this chapter. The isodiametric inequality via Steiner
-symmetrization is one of the cleanest proofs I've seen all semester. I
-didn't see it coming at all.
+The highlight of this chapter, and possibly the semester so far. The isodiametric inequality via Steiner
+symmetrization is one of the cleanest proofs I've seen all year. I was sitting in the back row with my laptop half-closed and I put it away to actually watch.
 
 \subsection{Steiner symmetrization}\label{subsec:steiner}
 
@@ -162,10 +161,9 @@ each $y$, let $A_y = \{t : y + ta \in A\}$. Then
 \]
 \end{definition}
 
-Picture: you slide each vertical ``slice'' of $A$ so it's centered on the
+Picture it: you slide each vertical ``slice'' of $A$ so it's centered on the
 hyperplane. Each slice keeps its length, so volume is preserved.
-But the set gets ``rounder,'' so the diameter can only shrink. That's the
-whole game.
+But the set gets ``rounder,'' so the diameter can only shrink.
 
 \begin{lemma}\label{lem:steiner-props}
 Let $A \subseteq \R^n$ be Borel.
@@ -192,7 +190,7 @@ least as far apart in the $a$-direction). Then:
   \le |y_1 - y_2|^2 + (s_1 - s_2)^2
   \le (\diam A)^2.
 \]
-The point is that centering the intervals can only bring points in the
+Centering the intervals can only bring points in the
 $a$-direction closer together. \qedhere
 \end{proof}
 
@@ -238,7 +236,7 @@ This gives $A_n \subseteq B(0, \diam A/2)$.
 
 Symmetrize along each axis. The set becomes origin-symmetric without
 changing volume or increasing diameter, so it fits in a ball of radius
-$\diam/2$. Really clean.
+$\diam/2$. That's it. I love this proof.
 
 \begin{remark}\label{rem:isodiametric-extends}
 The theorem extends to Lebesgue measurable sets and even arbitrary sets
@@ -249,7 +247,7 @@ outer measure).
 
 \subsection{$\mathcal{H}^n = \mathcal{L}^n$}\label{subsec:Hn-Ln}
 
-This is what all the machinery was for.
+Here's what all the machinery was building toward.
 
 \begin{theorem}\label{thm:Hn-equals-Ln}
 On $\R^n$, $\mathcal{H}^n = \mathcal{L}^n$.
@@ -277,7 +275,7 @@ $\mathcal{H}^n_\delta(A) \le \mathcal{L}^n(A)$, so
 $\mathcal{H}^n(A) \le \mathcal{L}^n(A)$.
 
 The isodiametric inequality does the heavy lifting in the first direction.
-The second direction is basically just checking the normalization works
+The second direction is basically just checking that the normalization works
 out. \qedhere
 \end{proof}
 
@@ -285,7 +283,7 @@ Brian and I spent a whole afternoon on why $\mathcal{H}^n = \mathcal{L}^n$
 isn't obvious. The short answer: ``cover by balls'' and ``cover by
 arbitrary sets'' give the same outer measure only after you prove a
 non-trivial geometric inequality. That's the isodiametric inequality.
-Without it you're stuck.
+Without it you're stuck. We sat in the courtyard outside Kaprielian Hall until it got dark.
 
 
 \subsection{Densities}\label{subsec:densities}
@@ -308,7 +306,7 @@ The density measures how uniformly $s$-dimensional a set looks at small
 scales near $x$. If $A$ is a smooth $k$-dimensional submanifold, then
 $\Theta^k(\mathcal{H}^k \mres A, x) = 1$ at every $x \in A$ --- locally
 the set looks like a flat $k$-plane, filling the ball at the same rate as
-$\R^k$. That's the clean case.
+$\R^k$.
 
 \begin{theorem}[Density bounds]\label{thm:density-bounds}
 Let $A \subseteq \R^n$ with $\mathcal{H}^s(A) < \infty$. Then:
@@ -321,7 +319,7 @@ Let $A \subseteq \R^n$ with $\mathcal{H}^s(A) < \infty$. Then:
 \end{theorem}
 
 The upper bound $\Theta^{*s} \le 1$ is the easier direction --- it's
-basically a covering argument using the definition of $\mathcal{H}^s$.
+a covering argument using the definition of $\mathcal{H}^s$.
 The lower bound $2^{-s} \le \Theta^{*s}$ is harder and relies on a
 Vitali-type covering lemma for Hausdorff measure.
 
@@ -331,8 +329,8 @@ $\mathcal{L}^n$-measurable sets equals $1$ a.e.\ on the set and $0$
 a.e.\ off it --- that's the Lebesgue density theorem. For non-integer $s$
 the density may not exist at all, and the gap between $2^{-s}$ and $1$ is
 genuine. Sets with non-integer Hausdorff dimension don't have clean local
-structure. This definition felt arbitrary until I saw how it shows up in
-rectifiability later.
+structure. I thought this definition was arbitrary until I saw how it shows up in
+rectifiability later. That changed my mind.
 \end{remark}
 
 TODO: understand the proof of the lower bound $2^{-s}$ better. Evans uses
@@ -342,7 +340,7 @@ a covering argument (pp.\ 72--73) that I need to go through line by line.
 \subsection{Connection to functions}\label{subsec:functions}
 
 The last bit connects Hausdorff measure back to the ``fine properties''
-theme of the book. The main tool is Fubini applied to subgraphs.
+theme of the book. The main tool: Fubini applied to subgraphs.
 
 \begin{definition}[Subgraph]\label{def:subgraph}
 For $f \colon \R^n \to [0, \infty]$ measurable, the \emph{subgraph} is
@@ -372,7 +370,7 @@ follows from approximation by simple functions. \qedhere
 \end{proof}
 
 One of those lemmas that feels obvious but needs Fubini to make honest.
-The point for later: you can study integrability, level sets, and
+The payoff for later: you can study integrability, level sets, and
 regularity of a function by looking at its subgraph as a subset of
 $\R^{n+1}$ and applying Hausdorff measure tools. The Cavalieri principle
 --- $\int f = \int_0^\infty \mathcal{L}^n(\{f > t\})\dd t$ --- is a close
@@ -380,7 +378,7 @@ relative.
 
 \bigskip
 
-That's Chapter~2. We've got Hausdorff measure, Hausdorff dimension, the
+That's Chapter~2. Hausdorff measure, Hausdorff dimension, the
 isodiametric inequality via Steiner symmetrization, the proof that
 $\mathcal{H}^n = \mathcal{L}^n$, density results, and the subgraph
 connection. The isodiametric inequality proof is the gem. The rest is

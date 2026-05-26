@@ -3,9 +3,9 @@
 
 \section{October 21, 2024}\label{sec:oct21}
 
-Midterm grades came back. Could've been worse. Today we start Chapter 5, which is about BV functions and sets of finite perimeter. Evans pp.\ 166--226 is one of the hardest stretches in the book.
+Midterm grades came back. Could've been worse. Today we start Chapter 5, which is about BV functions and sets of finite perimeter. Evans pp.\ 166--226 is one of the hardest stretches in the book, and I can feel it already.
 
-The whole point of BV is to handle jumps that $W^{1,1}$ can't. A function like the characteristic function of a ball has a perfectly good ``derivative'' in the distributional sense --- it's a surface measure on the boundary --- but $\chi_E \notin W^{1,1}$ because that derivative isn't an $L^1$ function. BV says: fine, let the derivative be a measure. That's the entire motivation.
+The whole point of BV is to handle jumps that $W^{1,1}$ can't. A function like the characteristic function of a ball has a perfectly good ``derivative'' in the distributional sense --- it's a surface measure on the boundary --- but $\chi_E \notin W^{1,1}$ because that derivative isn't an $L^1$ function. BV says: fine, let the derivative be a measure. That's the entire motivation. I'm drinking lukewarm coffee from the thermos I forgot to wash out yesterday.
 
 \subsection{Definitions and first properties}\label{subsec:bv-defs}
 
@@ -19,7 +19,7 @@ For $f \in L^1(U)$, define the \emph{variation} of $f$ in $U$ by
 Say $f \in BV(U)$ if $\norm{Df}(U) < \infty$.
 \end{definition}
 
-So you test $f$ against all smooth compactly supported divergence fields of magnitude at most 1, and take the sup. If that's finite, you're in $BV$. The sup is the total variation of $Df$, which by the Riesz representation theorem is an $\R^n$-valued Radon measure.
+You test $f$ against all smooth compactly supported divergence fields of magnitude at most 1, and take the sup. If that's finite, you're in $BV$. The sup is the total variation of $Df$, which by the Riesz representation theorem is an $\R^n$-valued Radon measure.
 
 The norm on $BV(U)$ is $\norm{f}_{BV} = \norm{f}_{L^1} + \norm{Df}(U)$.
 
@@ -38,7 +38,7 @@ Some examples worth keeping in your head:
 
 \subsection{The structure theorem}\label{subsec:structure}
 
-OK so here's the structural result that makes everything else in the chapter go.
+Here's the structural result that makes everything else in the chapter go.
 
 \begin{theorem}[Structure Theorem for BV]\label{thm:structure-bv}
 Let $f \in BV(U)$. Then $Df$ is an $\R^n$-valued Radon measure on $U$, admitting the decomposition
@@ -56,7 +56,7 @@ This is basically just Lebesgue--Radon--Nikodym decomposition applied to the mea
 
 For $\chi_E$, the absolutely continuous part vanishes and the singular part is the surface measure on $\partial E$. For a smooth function, it's all absolutely continuous and no singular part. For the devil's staircase, it's all singular.
 
-You can further decompose $D^s f = D^j f + D^c f$ into a \emph{jump part} concentrated on a countably $(n-1)$-rectifiable set and a \emph{Cantor part} that's singular but diffuse. I'll come back to this in the pointwise properties section.
+You can decompose $D^s f$ further into $D^j f + D^c f$: a \emph{jump part} concentrated on a countably $(n-1)$-rectifiable set and a \emph{Cantor part} that's singular but diffuse. I'll come back to this in the pointwise properties section.
 
 \subsection{Approximation and compactness}\label{subsec:approx-compact}
 
@@ -69,7 +69,7 @@ If $f_j \to f$ in $L^1(U)$, then
 \]
 \end{theorem}
 
-Why? Because $\norm{Df}(U)$ is defined as a supremum of continuous linear functionals of $f$. Each functional passes to the limit, and the sup of limits $\le$ the liminf of sups. Standard argument.
+Why? Because $\norm{Df}(U)$ is defined as a supremum of continuous linear functionals of $f$. Each functional passes to the limit, and the sup of limits is $\le$ the liminf of sups. Standard argument, but I had to sit down and write it out before I believed it.
 
 \begin{theorem}[Approximation by smooth functions]\label{thm:approx-bv}
 If $f \in BV(U)$, there exist $f_j \in C^\infty(U) \cap BV(U)$ with
@@ -78,7 +78,7 @@ If $f \in BV(U)$, there exist $f_j \in C^\infty(U) \cap BV(U)$ with
 \]
 \end{theorem}
 
-Here's the deal: this is convergence in the \emph{strict} topology, meaning $L^1$ convergence of functions plus convergence of total variation. You can NOT get $f_j \to f$ in the BV norm. That would require $\norm{Df_j - Df}(U) \to 0$, which is impossible in general because BV functions can have singular parts and smooth functions can't. The mollification $f * \rho_\varepsilon$ converges in $L^1$ and the variation converges, but $D(f * \rho_\varepsilon) - Df$ doesn't go to zero as a measure.
+Here's the catch: this is convergence in the \emph{strict} topology, meaning $L^1$ convergence of functions plus convergence of total variation. You can NOT get $f_j \to f$ in the BV norm. That would require $\norm{Df_j - Df}(U) \to 0$, which is impossible in general because BV functions can have singular parts and smooth functions can't. The mollification $f * \rho_\varepsilon$ converges in $L^1$ and the variation converges, but $D(f * \rho_\varepsilon) - Df$ doesn't go to zero as a measure.
 
 BV is not the closure of $C^\infty$ in the BV norm. That closure is $W^{1,1}$.
 
@@ -86,7 +86,7 @@ BV is not the closure of $C^\infty$ in the BV norm. That closure is $W^{1,1}$.
 Let $\{f_j\}$ be a sequence in $BV(U)$ with $\sup_j \norm{f_j}_{BV(U)} < \infty$, where $U$ is bounded with Lipschitz boundary. Then a subsequence converges in $L^1(U)$ to some $f \in BV(U)$.
 \end{theorem}
 
-In Sobolev spaces you'd get weak convergence by reflexivity, but $W^{1,1}$ isn't reflexive and neither is $BV$. The compactness is only in $L^1$. Still, combined with lower semicontinuity, it's enough for the direct method. I hate this notation but it works.
+In Sobolev spaces you'd get weak convergence by reflexivity, but $W^{1,1}$ isn't reflexive and neither is $BV$. The compactness is only in $L^1$. Combined with lower semicontinuity, it's enough for the direct method in the calculus of variations.
 
 \subsection{Traces and extensions}\label{subsec:trace-ext}
 
@@ -98,18 +98,18 @@ Let $U \subset \R^n$ be bounded open with Lipschitz boundary. There's a bounded 
 with $Tf = f|_{\partial U}$ for $f \in BV(U) \cap C(\overline{U})$.
 \end{theorem}
 
-The trace only lands in $L^1(\partial U)$. No fractional Sobolev regularity. Makes sense: BV functions can jump, so the trace just records boundary values of those jumps. The proof goes through the same flattening machinery as Sobolev traces but needs the BV-specific approximation results.
+The trace only lands in $L^1(\partial U)$. No fractional Sobolev regularity. Makes sense: BV functions can jump, so the trace just records boundary values of those jumps. The proof uses the same flattening machinery as Sobolev traces but needs the BV-specific approximation results.
 
 \begin{theorem}[Extension]\label{thm:extension-bv}
 Let $U \subset \R^n$ be bounded with Lipschitz boundary. There's a bounded linear operator $E: BV(U) \to BV(\R^n)$ with $Ef = f$ a.e.\ in $U$, $\spt(Ef)$ compact, and $\norm{Ef}_{BV(\R^n)} \le C \norm{f}_{BV(U)}$.
 \end{theorem}
 
-Standard extension result. Mirrors the Sobolev case. The Lipschitz boundary condition is doing real work here.
+Mirrors the Sobolev case. The Lipschitz boundary condition is doing real work here.
 
 
 \section{October 23, 2024}\label{sec:oct23}
 
-Today: coarea formula and isoperimetric inequality. I think the coarea formula is the single best result in the chapter. Brian said the same thing last week.
+Today: coarea formula and isoperimetric inequality. I think the coarea formula is the single best result in the chapter. Brian said the same thing last week, independently.
 
 \subsection{Coarea formula for BV}\label{subsec:coarea}
 
@@ -127,17 +127,17 @@ For $f \in W^{1,1}(U)$, the formula becomes
 \[
   \int_A |\nabla f| \, dx \;=\; \int_{-\infty}^{\infty} \mathcal{H}^{n-1}(A \cap \partial^*\{f > t\})\, dt,
 \]
-which is a generalization of the classical coarea formula from differential geometry.
+which generalizes the classical coarea formula.
 
 \begin{remark}\label{rmk:coarea-converse}
 The formula also gives a converse criterion: $f \in L^1(U)$ is in $BV(U)$ if and only if $\int_{-\infty}^\infty \norm{\partial\{f > t\}}(U)\,dt < \infty$. Sometimes this is the easiest way to check BV membership.
 \end{remark}
 
-I found the proof confusing on first read because Evans uses the approximation theorem to reduce to smooth $f$ first, then proves the smooth case by the classical coarea formula, then passes to the limit using lower semicontinuity. The inequality $\le$ and $\ge$ are proved separately, and the $\ge$ direction is the harder one.
+The proof confused me on first read because Evans uses the approximation theorem to reduce to smooth $f$ first, then proves the smooth case by the classical coarea formula, then passes to the limit using lower semicontinuity. The inequality $\le$ and $\ge$ are proved separately, and the $\ge$ direction is harder.
 
 \subsection{Isoperimetric inequalities}\label{subsec:isoperimetric}
 
-Among all sets of given volume, the ball has the smallest perimeter. Known since antiquity. Here's the precise statement.
+Among all sets of given volume, the ball has the smallest perimeter. Known since antiquity, apparently, which makes you wonder what the ancient Greeks were doing at parties.
 
 \begin{theorem}[Isoperimetric inequality]\label{thm:isoperimetric}
 Let $E \subset \R^n$ have finite perimeter. Then
@@ -151,7 +151,7 @@ The argument uses the coarea formula. You first establish the BV Sobolev inequal
 \[
   \norm{f}_{L^{n/(n-1)}(\R^n)} \;\le\; \frac{1}{n\,\alpha(n)^{1/n}} \norm{Df}(\R^n).
 \]
-Then plug in $f = \chi_E$. The left side gives $\mathcal{L}^n(E)^{(n-1)/n}$ and the right side gives $\norm{\partial E}(\R^n)$ times the constant. Done.
+Then plug in $f = \chi_E$. The left side gives $\mathcal{L}^n(E)^{(n-1)/n}$ and the right side gives $\norm{\partial E}(\R^n)$ times the constant.
 
 Well, not quite done. The equality case requires a symmetrization argument, which is a different beast entirely. But the inequality itself follows from the coarea formula in about half a page.
 
@@ -164,11 +164,11 @@ Useful for compactness arguments.
 
 \section{October 28, 2024}\label{sec:oct28}
 
-This chapter is harder than Chapter 4. Today we get into the geometric measure theory proper: reduced boundary, blow-up, and the generalized divergence theorem.
+This chapter is harder than Chapter 4. I'm sure of it now. Today we get into the geometric measure theory proper: reduced boundary, blow-up, and the generalized divergence theorem.
 
 \subsection{Sets of finite perimeter and the reduced boundary}\label{subsec:reduced-boundary}
 
-The idea: for a set $E$ of finite perimeter, the ``boundary'' in the BV sense isn't the topological boundary $\partial E$ (which can be wild). It's a well-behaved subset called the \emph{reduced boundary} $\partial^* E$.
+For a set $E$ of finite perimeter, the ``boundary'' in the BV sense isn't the topological boundary $\partial E$ (which can be wild). It's a well-behaved subset called the \emph{reduced boundary} $\partial^* E$.
 
 \begin{definition}[Reduced boundary]\label{def:reduced-boundary}
 Let $E$ have finite perimeter in $\R^n$. Write $\mu_E = D\chi_E$ for the Gauss--Green measure and $\norm{\mu_E} = \norm{\partial E}$ for its total variation. A point $x \in \R^n$ belongs to the \emph{reduced boundary} $\partial^* E$ if:
@@ -180,11 +180,11 @@ Let $E$ have finite perimeter in $\R^n$. Write $\mu_E = D\chi_E$ for the Gauss--
 The vector $\nu_E(x)$ is called the \emph{measure-theoretic outer unit normal}.
 \end{definition}
 
-So $\partial^* E$ consists of points where the boundary ``looks like a hyperplane'' at small scales. At every such point there's a meaningful notion of which way is out. The reduced boundary $\partial^* E$ is always contained in the topological boundary $\partial E$, and they can differ a lot. If you modify $E$ on a null set, the topological boundary can change wildly but $\partial^* E$ stays the same.
+So $\partial^* E$ consists of points where the boundary ``looks like a hyperplane'' at small scales. At every such point there's a meaningful notion of which way is out. The reduced boundary is always contained in the topological boundary $\partial E$, and they can differ a lot. If you modify $E$ on a null set, the topological boundary can change wildly but $\partial^* E$ stays put.
 
 \subsection{The blow-up theorem}\label{subsec:blowup}
 
-This is the hard direction. The proof is genuinely hard and I don't have a clean two-line summary.
+This is the hard direction. The proof is genuinely hard and I don't have a clean summary for it.
 
 \begin{theorem}[Blow-up at the reduced boundary]\label{thm:blowup}
 Let $E$ have finite perimeter, $x \in \partial^* E$ with outer normal $\nu_E(x)$. Define
@@ -220,7 +220,7 @@ Let $E \subset \R^n$ have finite perimeter, $\varphi \in C_c^1(\R^n; \R^n)$. The
 \]
 \end{theorem}
 
-The classical divergence theorem needs $E$ to have smooth or Lipschitz boundary. This version only needs finite perimeter. The integral over the boundary is over $\partial^* E$ with the measure-theoretic normal. I think the cleanest way to see why this works is: $D\chi_E = -\nu_E \mathcal{H}^{n-1} \lfloor \partial^* E$ by the structure theory, and then the formula is just the definition of distributional derivative applied to $\chi_E$.
+The classical divergence theorem needs $E$ to have smooth or Lipschitz boundary. This version only needs finite perimeter. The integral over the boundary is over $\partial^* E$ with the measure-theoretic normal. The cleanest way to see why this works: $D\chi_E = -\nu_E \mathcal{H}^{n-1} \lfloor \partial^* E$ by the structure theory, and then the formula is just the definition of distributional derivative applied to $\chi_E$.
 
 \subsection{Pointwise properties of BV functions}\label{subsec:pointwise}
 
@@ -240,9 +240,9 @@ So the full decomposition is:
   Df \;=\; \underbrace{\nabla f \, \mathcal{L}^n}_{\text{abs.\ cont.}} \;+\; \underbrace{(f^+ - f^-)\nu_f \, \mathcal{H}^{n-1}\lfloor J_f}_{\text{jump}} \;+\; \underbrace{D^c f}_{\text{Cantor}}.
 \]
 
-The three parts live on ``different'' sets. The ac part is spread over $U$. The jump part sits on the $(n-1)$-dimensional jump set. And the Cantor part is on something even weirder, like the Cantor set itself.
+The three parts live on ``different'' sets. The ac part is spread over $U$. The jump part sits on the $(n-1)$-dimensional jump set. And the Cantor part is on something weirder still --- like the Cantor set itself. Three flavors of derivative, each with its own geometry. I spent a whole evening just staring at this decomposition.
 
-For $\chi_E$ with $E$ having finite perimeter: $\nabla\chi_E = 0$, $D^c\chi_E = 0$, and $D^j\chi_E = -\nu_E \,\mathcal{H}^{n-1}\lfloor\partial^*E$. It's all jump, nothing fancy.
+For $\chi_E$ with $E$ having finite perimeter: $\nabla\chi_E = 0$, $D^c\chi_E = 0$, and $D^j\chi_E = -\nu_E \,\mathcal{H}^{n-1}\lfloor\partial^*E$. All jump, nothing else.
 
 \subsection{Essential variation on lines}\label{subsec:essential-variation}
 

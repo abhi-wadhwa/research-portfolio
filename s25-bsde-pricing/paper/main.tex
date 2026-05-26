@@ -86,97 +86,103 @@ extensible language for nonlinear pricing and risk management.
 % ===================================================================
 \section{Introduction}\label{sec:intro}
 
-The Black--Scholes--Merton framework~\cite{blackscholes1973pricing} provides a
-complete theory of derivative pricing in frictionless, complete markets.  At
-its mathematical core lies the Feynman--Kac theorem, which identifies the
-solution of the linear pricing PDE with a conditional expectation under the
-risk-neutral measure.  This identification enables two complementary numerical
-strategies: solve the PDE directly via finite differences, or estimate the
-expectation via Monte Carlo.
+Black--Scholes--Merton~\cite{blackscholes1973pricing} gave us a clean story.
+Frictionless market, complete hedging, a PDE with a closed-form solution. At
+the bottom of it sits the Feynman--Kac theorem: the pricing PDE's solution
+equals a conditional expectation under the risk-neutral measure. That duality
+opens two numerical doors---solve the PDE on a grid, or throw Monte Carlo
+paths at the expectation. Both work. Both are well-understood. I spent a
+pleasant week implementing them before anything in this paper got difficult.
 
-In practice, the frictionless assumption is a convenient fiction.  Transaction
-costs erode hedging gains~\cite{leland1985option}; borrowing and lending rates
-differ~\cite{bergman1995option}; model parameters---especially volatility---are
-uncertain~\cite{avellaneda1995pricing}; counterparties may default, creating
-credit valuation adjustments (CVA) that depend nonlinearly on the portfolio
-value~\cite{bichuch2018xva,crepey2014counterparty}.  Each of these frictions
-introduces a nonlinearity into the pricing equation.  The linear Feynman--Kac
-theorem no longer applies, and the two numerical strategies must be reconciled
-through a more general theory.
+The trouble is that frictionless markets don't exist.
+Transaction costs eat your hedging gains~\cite{leland1985option}. You can't
+borrow at the rate you lend~\cite{bergman1995option}. Nobody knows the true
+volatility, and pretending otherwise is a choice with
+consequences~\cite{avellaneda1995pricing}. Your counterparty might default,
+which creates a credit valuation adjustment that depends on the very thing
+you're trying to price~\cite{bichuch2018xva,crepey2014counterparty}. Every
+one of these frictions breaks linearity. The Feynman--Kac theorem, in its
+textbook form, stops working. And the two numerical strategies that felt so
+natural a paragraph ago need a new theoretical backbone.
 
-Pardoux and Peng~\cite{pardoux1990adapted} initiated the modern theory of
-backward stochastic differential equations (BSDEs) in 1990, proving that a
-BSDE with Lipschitz driver admits a unique adapted solution.  Seven years
-later, El Karoui, Peng, and Quenez~\cite{elkaroui1997backward} demonstrated
-that BSDEs provide the natural framework for pricing and hedging in incomplete
-and friction-laden markets: the BSDE value process $Y$ gives the price, the
-control process $Z$ gives the hedge, and the driver $f$ encodes the market
-friction.  The nonlinear Feynman--Kac theorem
-(see~\cite{pardoux1990adapted,zhang2017backward}) then establishes that
-$Y_t = u(t, X_t)$ where $u$ is a viscosity solution of the corresponding
-semilinear PDE.
+That backbone turns out to be backward stochastic differential equations.
+Pardoux and Peng~\cite{pardoux1990adapted} proved in 1990 that a BSDE with a
+Lipschitz driver has a unique adapted solution. Seven years later, El Karoui,
+Peng, and Quenez~\cite{elkaroui1997backward} made the financial case: BSDEs
+are the right language for pricing and hedging when markets aren't clean. The
+value process $Y$ gives you the price, the control process $Z$ gives you the
+hedge, and the driver $f$ swallows whatever friction you're worried about. A
+nonlinear Feynman--Kac theorem
+(see~\cite{pardoux1990adapted,zhang2017backward}) then says
+$Y_t = u(t, X_t)$ where $u$ is a viscosity solution of the semilinear PDE.
+This is a genuinely satisfying correspondence, and I don't think I fully
+appreciated it until I'd coded the whole pipeline end to end.
 
-Since its introduction, the BSDE framework has expanded in three directions
-that motivate this paper:
+Three directions have grown out of this framework, and they're what this paper
+is about.
 
 \paragraph{Direction 1: Deep learning for high-dimensional BSDEs.}
-Classical BSDE solvers based on regression Monte Carlo
-\cite{bouchard2004discrete,zhang2004numerical,gobet2005regression} scale
-poorly beyond a handful of dimensions.  The deep BSDE method of E, Han, and
-Jentzen~\cite{ehan2017deep,han2018solving} reformulates the discretized BSDE
-as a stochastic control problem, approximates the gradient process $Z$ at each
-time step by a neural network, and trains end-to-end by minimizing the terminal
-condition loss.  Han and Long~\cite{hanlong2020convergence} provided a
-posteriori error bounds, and subsequent work by Hur\'{e}, Pham, and
-Warin~\cite{hure2020deep} (the DBDP1/DBDP2 schemes) and Beck et
-al.~\cite{beck2021deep} (deep splitting) offered robustness alternatives.
-These methods have solved problems in 100+ dimensions that are completely
-intractable for grid-based PDE solvers.
+Classical BSDE solvers---regression Monte Carlo \`a la
+Bouchard--Touzi~\cite{bouchard2004discrete},
+Zhang~\cite{zhang2004numerical}, Gobet--Lemor--Warin~\cite{gobet2005regression}---fall
+apart once you push beyond a few dimensions. I mean that literally: the
+polynomial basis explodes, memory balloons, and you sit there watching a
+progress bar that will never finish. The deep BSDE method of E, Han, and
+Jentzen~\cite{ehan2017deep,han2018solving} gets around this by turning the
+discretized BSDE into a stochastic optimization problem. You approximate $Z$
+at each time step with a neural network and train the whole thing end-to-end
+against the terminal condition. Han and Long~\cite{hanlong2020convergence}
+later gave a posteriori error bounds. Alternatives followed: the DBDP schemes
+of Hur\'{e}, Pham, and Warin~\cite{hure2020deep}, the deep splitting approach
+of Beck et al.~\cite{beck2021deep}. People have solved 100+ dimensional
+problems with these methods. That number still surprises me a little.
 
 \paragraph{Direction 2: XVA as nonlinear BSDEs.}
-Post-2008 regulatory requirements mandate that banks account for
-counterparty credit risk (CVA), own-credit risk (DVA), and funding costs (FVA)
-when marking derivatives to market.  The total valuation adjustment
+After 2008, regulators started requiring banks to account for counterparty
+credit risk (CVA), own-credit risk (DVA), and funding costs (FVA) when marking
+derivatives. The total adjustment
 $\text{XVA} = \text{CVA} + \text{DVA} + \text{FVA}$
-creates a nonlinear feedback: the funding cost depends on the derivative value,
-which in turn depends on the funding cost.  Bichuch, Capponi, and
-Sturm~\cite{bichuch2018xva} showed that this coupled system admits a natural
-BSDE formulation, and Cr\'{e}pey, Bielecki, and
-Brigo~\cite{crepey2014counterparty} developed the computational framework in
-detail.
+creates a circular dependency: the funding cost depends on the derivative's
+value, and the derivative's value depends on the funding cost. This kind of
+thing gives you a headache until you realize it's just a nonlinear BSDE.
+Bichuch, Capponi, and Sturm~\cite{bichuch2018xva} showed how the coupled
+system fits naturally into the BSDE framework, and Cr\'{e}pey, Bielecki, and
+Brigo~\cite{crepey2014counterparty} built out the computational
+infrastructure.
 
 \paragraph{Direction 3: $g$-expectations and dynamic risk measures.}
-Peng~\cite{peng2004nonlinear,peng2019nonlinear} recognized that the BSDE
-mapping $\xi \mapsto Y_t$ defines a nonlinear expectation operator---the
-$g$-expectation---that satisfies time-consistency by construction.  When the
-generator $g$ is sublinear and positively homogeneous, the resulting
-$g$-expectation defines a coherent risk measure in the sense of Artzner,
-Delbaen, Eber, and Heath~\cite{artzner1999coherent}.  This connection provides
-a principled way to construct dynamic, time-consistent risk measures for
-portfolio management and regulatory capital computation.
+Peng~\cite{peng2004nonlinear,peng2019nonlinear} noticed that the map
+$\xi \mapsto Y_t$---just reading off the BSDE solution at time $t$---defines a
+nonlinear expectation operator. He called it the $g$-expectation, and it's
+time-consistent by construction, which is the property everyone wants and
+nobody gets for free. When the generator $g$ is sublinear and positively
+homogeneous, you get a coherent risk measure in the sense of Artzner, Delbaen,
+Eber, and Heath~\cite{artzner1999coherent}. So there's a direct line from
+``solve a BSDE'' to ``have a principled dynamic risk measure for your
+portfolio.'' I find this connection beautiful, and also slightly suspicious in
+how neatly it works out.
 
 \paragraph{Contributions and outline.}
-This paper implements all three directions within a single computational
-framework and provides numerical evidence for the theoretical connections.
+I implement all three directions in a single codebase and provide numerical
+evidence for the theoretical connections.
 Section~\ref{sec:theory} develops the BSDE theory:
 existence/uniqueness (Pardoux--Peng), the financial interpretation
 (El~Karoui--Peng--Quenez), the comparison theorem, and the nonlinear
-Feynman--Kac theorem with a careful statement involving viscosity solutions.
-Section~\ref{sec:deep_bsde} presents the deep BSDE method, including the
-E--Han--Jentzen reformulation, convergence considerations, and comparison with
-alternative deep solvers (DBDP, deep splitting).
-Section~\ref{sec:numerics} details the numerical methods for forward SDE
-simulation, classical BSDE regression, Crank--Nicolson PDE solving, and the
-PyTorch deep BSDE implementation.
+Feynman--Kac theorem stated carefully in terms of viscosity solutions.
+Section~\ref{sec:deep_bsde} presents the deep BSDE method---the
+E--Han--Jentzen reformulation, convergence results, and a comparison with
+DBDP and deep splitting.
+Section~\ref{sec:numerics} covers the nuts and bolts: forward SDE
+discretization, backward regression, Crank--Nicolson with Picard iteration,
+and the PyTorch implementation.
 Section~\ref{sec:xva} formulates CVA/DVA/FVA as nonlinear BSDEs and presents
-our CVA computation on a netting set of interest rate swaps.
-Section~\ref{sec:g_expectations} develops $g$-expectations, their connection
-to coherent risk measures, and time-consistency verification.
-Section~\ref{sec:results} presents the full numerical results: classical
+a CVA computation on a netting set of interest rate swaps.
+Section~\ref{sec:g_expectations} develops $g$-expectations, ties them to
+coherent risk measures, and checks time-consistency numerically.
+Section~\ref{sec:results} has all the plots and numbers: classical
 BSDE/PDE verification, deep BSDE benchmarks in dimensions 5--50, CVA
 exposures and BSDE/MC comparison, and $g$-expectation properties.
-Section~\ref{sec:conclusion} summarizes contributions and discusses open
-directions.
+Section~\ref{sec:conclusion} wraps up.
 
 
 % ===================================================================
@@ -209,13 +215,16 @@ In integral form:
   Y_t = \xi + \int_t^T f(s, Y_s, Z_s)\ds - \int_t^T Z_s^\top \dW_s,
   \quad 0 \le t \le T.
 \end{equation}
-The terminal value $\xi$ and the driver $f$ are given; the unknowns are
-$(Y, Z)$.  The process $Y$ carries the value, while $Z$ arises from the
-martingale representation of $Y$ and carries the hedging information.
+You're given the terminal value $\xi$ and the driver $f$; the unknowns are
+$(Y, Z)$. The process $Y$ carries the value---that's the thing you actually
+want. $Z$ comes from the martingale representation of $Y$ and, in
+financial terms, it's your hedge.
 
 \subsection{Existence, Uniqueness, and the Comparison Theorem}
 
 The foundational result is due to Pardoux and Peng~\cite{pardoux1990adapted}.
+I'll state it and sketch the proof because the contraction argument is the
+engine behind everything else in this paper.
 
 \begin{theorem}[Pardoux--Peng, 1990]\label{thm:existence}
 Let $\xi \in L^2(\F_T)$ and suppose the driver $f$ satisfies:
@@ -245,9 +254,10 @@ large $\beta$, yielding the fixed point.  See~\cite{pardoux1990adapted}
 or~\cite[Chapter~4]{zhang2017backward} for details.
 \end{proof}
 
-A key consequence for pricing is the comparison theorem, which gives us
-monotonicity of the BSDE solution with respect to the terminal condition and
-the driver.
+For pricing, the next result is the one that matters: the comparison theorem.
+It gives monotonicity of the BSDE solution in both the terminal condition and
+the driver. If your friction is bigger, your price is bigger. Obvious in
+hindsight, but you need the theorem to say it.
 
 \begin{theorem}[Comparison Theorem]\label{thm:comparison}
 Let $(Y^1, Z^1)$ and $(Y^2, Z^2)$ be solutions of BSDEs with drivers
@@ -260,24 +270,23 @@ Then $Y_t^1 \ge Y_t^2$ a.s.\ for all $t \in [0,T]$.
 \end{theorem}
 
 \begin{remark}
-In the financial interpretation, the comparison theorem implies that a more
-costly friction (larger driver) leads to a higher seller's price.  This gives
-the natural ordering: transaction costs increase option prices, and
-higher counterparty default intensity increases CVA.
+Financially, the comparison theorem tells you what you'd expect: a costlier
+friction---a larger driver---means a higher seller's price. Transaction costs
+push option prices up. Higher counterparty default intensity pushes CVA up.
+The theorem turns gut feeling into a proof.
 \end{remark}
 
 \subsection{The Financial Interpretation: El Karoui--Peng--Quenez}
 
-El Karoui, Peng, and Quenez~\cite{elkaroui1997backward} established the
-definitive financial interpretation of BSDEs.  Consider a market with one
-riskless bond (rate $r$) and one risky asset $S$.  A self-financing portfolio
-with wealth process $V$ and investment $\pi$ in the risky asset satisfies
+El Karoui, Peng, and Quenez~\cite{elkaroui1997backward} wrote the paper that
+made BSDEs a finance tool. The setup: one riskless bond earning rate $r$, one
+risky asset $S$. A self-financing portfolio with wealth $V$ and risky
+investment $\pi$ satisfies
 \[
   \mathrm{d}V_t = r V_t \dt + \pi_t (\mathrm{d}S_t - r S_t \dt).
 \]
-Setting $Y_t = V_t$, $Z_t = \pi_t \sigma_t$ (where $\sigma_t$ is the
-volatility of $S$), and $f(t,y,z) = -ry$, this is a linear BSDE.  The
-correspondence becomes:
+Set $Y_t = V_t$, $Z_t = \pi_t \sigma_t$, and $f(t,y,z) = -ry$. That's a
+linear BSDE. The dictionary:
 \begin{center}
 \begin{tabular}{ll}
 \toprule
@@ -292,12 +301,15 @@ $f(t, y, z)$ & Discounting + friction costs \\
 \end{center}
 
 When the market is incomplete or frictions are present, the driver $f$ absorbs
-the additional costs, and the BSDE value $Y_0$ gives the price that makes a
-particular hedging strategy self-financing.
+whatever extra costs you're dealing with, and $Y_0$ gives the price that makes
+a particular hedging strategy self-financing. I think the reason this paper
+landed so hard in the quant finance community is that it's almost too clean: you don't
+have to change the framework, you just change the driver.
 
 \subsection{The Nonlinear Feynman--Kac Theorem}\label{sec:nlfk}
 
-Consider the coupled forward-backward system (FBSDE): the forward SDE
+Now for the result that ties BSDEs to PDEs. Consider the coupled
+forward-backward system: the forward SDE
 \begin{equation}\label{eq:fbsde_forward}
   \mathrm{d}X_t = b(t, X_t)\dt + \sigma(t, X_t)\dW_t, \quad X_0 = x,
 \end{equation}
@@ -345,30 +357,34 @@ and~\cite{pardoux1990adapted}.
 \end{proof}
 
 \begin{remark}
-When $f(t,x,y,z) = -ry$ (the linear Black--Scholes driver),
-equation~\eqref{eq:nonlinear_pde} reduces to the Black--Scholes PDE and
-Theorem~\ref{thm:nonlinear_fk} recovers the classical Feynman--Kac formula
-$u(t,x) = \E^\Q[e^{-r(T-t)} g(X_T) \mid X_t = x]$.
+When $f(t,x,y,z) = -ry$---the plain vanilla Black--Scholes
+driver---equation~\eqref{eq:nonlinear_pde} collapses to the Black--Scholes PDE
+and Theorem~\ref{thm:nonlinear_fk} gives back the classical Feynman--Kac
+formula:
+$u(t,x) = \E^\Q[e^{-r(T-t)} g(X_T) \mid X_t = x]$. So the nonlinear version
+really does generalize the thing you already know. I spent an embarrassing
+amount of time convincing myself of this before trusting the code.
 \end{remark}
 
 \subsection{Market Frictions as Nonlinear Drivers}\label{sec:drivers}
 
-Different market frictions correspond to different choices of the BSDE driver
-$f$.  Each driver below satisfies the Lipschitz condition of
-Theorem~\ref{thm:existence}, ensuring a well-posed pricing problem.
+Different frictions, different drivers. Each one below satisfies the Lipschitz
+condition of Theorem~\ref{thm:existence}, so the pricing problem stays
+well-posed. That's the whole trick: you get to be nonlinear without losing
+existence and uniqueness.
 
 \subsubsection{Transaction Costs (Leland 1985)}
-Following~\cite{leland1985option}, proportional transaction costs lead to
-hedging costs that depend on the absolute rebalancing size:
+Following~\cite{leland1985option}, proportional transaction costs produce
+hedging expenses that depend on the absolute rebalancing size:
 \begin{equation}\label{eq:driver_tc}
   f_{\mathrm{tc}}(t, y, z) = -ry - \kappa \abs{z},
 \end{equation}
-where $\kappa \ge 0$ is the transaction cost intensity.  The nonlinearity
-$\abs{z}$ makes the pricing equation semilinear.
+where $\kappa \ge 0$ is the cost intensity. The $\abs{z}$ is what makes
+this nonlinear---and what makes it annoying numerically.
 
 \subsubsection{Uncertain Volatility (Avellaneda--Levy--Par\'{a}s 1995)}
-When volatility is known only to lie in $[\sigma_L, \sigma_H]$,
-worst-case pricing selects the volatility that maximizes the option value.
+If volatility is only known to live in $[\sigma_L, \sigma_H]$,
+worst-case pricing picks whichever volatility hurts you most.
 The simplified BSDE driver:
 \begin{equation}\label{eq:driver_uv}
   f_{\mathrm{uv}}(t, y, z) = -ry + \lambda\abs{z},
@@ -376,7 +392,7 @@ The simplified BSDE driver:
 \end{equation}
 
 \subsubsection{Asymmetric Funding Rates (Bergman 1995)}
-With borrowing rate $r_b > r_l$ (lending rate), the driver is:
+When borrowing rate $r_b$ exceeds lending rate $r_l$, the driver becomes:
 \begin{equation}\label{eq:driver_funding}
   f_{\mathrm{fund}}(t, y, z) = -R(y)\,y,
   \quad R(y) = r_l \cdot \mathbf{1}_{y \ge 0} + r_b \cdot \mathbf{1}_{y < 0}.
@@ -400,10 +416,10 @@ The other two are similar.
 
 \subsection{The E--Han--Jentzen Reformulation}
 
-The key insight of~\cite{ehan2017deep,han2018solving} is to view the
-discretized BSDE as a stochastic control problem.  Consider the time grid
-$0 = t_0 < t_1 < \cdots < t_N = T$ with $\Delta t = T/N$.  The Euler
-discretization of the FBSDE gives:
+Here's the idea from~\cite{ehan2017deep,han2018solving}, and I think it's
+genuinely clever. Take a time grid
+$0 = t_0 < t_1 < \cdots < t_N = T$ with $\Delta t = T/N$. Euler-discretize
+the FBSDE:
 \begin{align}
   X_{n+1} &= X_n + b_n \Delta t + \sigma_n \Delta W_n, \label{eq:deep_X}\\
   Y_{n+1} &= Y_n - f(t_n, X_n, Y_n, Z_n)\Delta t
@@ -411,74 +427,76 @@ discretization of the FBSDE gives:
 \end{align}
 where $\Delta W_n \sim \mathcal{N}(0, \Delta t \cdot I_d)$.
 
-In the classical approach, both $Y_0$ and $\{Z_n\}_{n=0}^{N-1}$ are unknowns
-recovered by backward regression.  The deep BSDE method instead
-\emph{parameterizes} $Z_n \approx \phi_n(X_n; \theta_n)$ where each
-$\phi_n$ is a feedforward neural network, and treats $Y_0$ as a single
-trainable parameter.  The full forward pass~\eqref{eq:deep_X}--\eqref{eq:deep_Y}
-from $n=0$ to $n=N$ produces a predicted terminal value $\hat{Y}_N$.  The
-loss is
+Classically, you'd recover $Y_0$ and $\{Z_n\}_{n=0}^{N-1}$ by backward
+regression. That's painful in high dimensions. The deep BSDE method flips the
+script: parameterize $Z_n \approx \phi_n(X_n; \theta_n)$ where each
+$\phi_n$ is a feedforward neural network, treat $Y_0$ as a single
+trainable scalar, and run the whole
+thing~\eqref{eq:deep_X}--\eqref{eq:deep_Y} forward from $n=0$ to $n=N$.
+Out comes a predicted terminal value $\hat{Y}_N$. The loss:
 \begin{equation}\label{eq:deep_loss}
   \mathcal{L}(\theta) = \E\!\left[\abs{\hat{Y}_N - g(X_N)}^2\right],
 \end{equation}
-estimated by mini-batch sampling of the Brownian increments and minimized
-by stochastic gradient descent (Adam optimizer).
+estimated by mini-batches of Brownian increments, minimized with Adam. That's
+it. I remember reading the paper and thinking there had to be a catch.
+Well, there is. Several, actually. But first, architecture.
 
 \subsection{Network Architecture}
 
-At each time step $n$, the network $\phi_n \colon \R^d \to \R^d$ has
-the architecture:
+At each time step $n$, the network $\phi_n \colon \R^d \to \R^d$ looks like:
 \[
   x \;\xrightarrow{\text{BN}}\;
   [\text{Linear} \to \text{BN} \to \text{ReLU}]^L
   \;\xrightarrow{\text{Linear}}\; z,
 \]
-where BN denotes batch normalization and $L$ is the number of hidden layers
-(typically $L = 2$).  The hidden dimension is modest (32--64 neurons per layer),
-and the total number of trainable parameters scales as $O(N \cdot L \cdot d^2)$.
+where BN is batch normalization and $L$ is the number of hidden layers
+(usually $L = 2$). Hidden dimensions are modest---32 to 64 neurons per
+layer---and the total parameter count scales as $O(N \cdot L \cdot d^2)$.
 
 \begin{remark}
-The deep BSDE method uses $N$ separate networks---one per time step---rather
-than a single network conditioned on time.  This avoids the difficulty of
-approximating a function that changes rapidly across the time grid, at the cost
-of more parameters.
+You get $N$ separate networks, one per time step, not a single network with
+time as an input. This sidesteps the problem of approximating a function that
+changes fast across the time grid. The price is more parameters. I initially
+thought sharing weights across time steps would be smarter; it wasn't.
 \end{remark}
 
 \subsection{Convergence Theory and Caveats}
 
-Han and Long~\cite{hanlong2020convergence} established a posteriori error
-bounds: if the loss~\eqref{eq:deep_loss} is small, then the deep BSDE
-approximation is close to the true solution in the $L^2$ sense.  Specifically,
-for the coupled FBSDE with Lipschitz coefficients,
+Han and Long~\cite{hanlong2020convergence} proved a posteriori error bounds:
+if the loss~\eqref{eq:deep_loss} is small, then the deep BSDE approximation is
+close to the true solution in $L^2$. Specifically, for the coupled FBSDE with
+Lipschitz coefficients,
 \[
   \E\!\left[\sup_{0 \le n \le N} |Y_n - \hat{Y}_n|^2\right]
   \le C \left(\mathcal{L}(\hat{\theta}) + (\Delta t)^2\right),
 \]
 where $C$ depends on the Lipschitz constants and $T$.
 
-However, several caveats apply:
+But there are real problems:
 \begin{enumerate}[label=(\roman*)]
-  \item The loss landscape is non-convex, and training can get stuck in local
-  minima, particularly for highly nonlinear drivers.
-  \item The $O(N)$ networks create a large parameter space; training requires
-  careful learning rate scheduling and gradient clipping.
-  \item The method provides a forward-in-time approximation of $Y_0$ but does
-  not directly give the full solution surface $u(t,x)$.
+  \item The loss surface is non-convex. Training can stall in local minima,
+  especially for stiff nonlinear drivers. I watched this happen on
+  Allen--Cahn at 3 AM and it wasn't fun.
+  \item $O(N)$ networks means a big parameter space. You need learning rate
+  scheduling, gradient clipping, and patience.
+  \item You get $Y_0$---one number---not the full solution surface $u(t,x)$.
+  If you want the surface, you need a different method.
 \end{enumerate}
 
 \subsection{Alternative Deep Solvers}
 
-Two notable alternatives address some of these limitations:
+Two alternatives address some of these headaches:
 \begin{itemize}
   \item \textbf{DBDP1/DBDP2}~\cite{hure2020deep}: Deep Backward Dynamic
-  Programming trains a \emph{single} neural network at each backward time step
-  to approximate the continuation value $Y_n = \E[Y_{n+1} + f \Delta t \mid X_n]$.
-  This is closer in spirit to Longstaff--Schwartz but replaces polynomial
-  regression with neural network regression.  DBDP2 further approximates $Z_n$
-  via automatic differentiation of the trained network.
+  Programming trains a single network at each backward time step to approximate
+  the continuation value $Y_n = \E[Y_{n+1} + f \Delta t \mid X_n]$.
+  Think Longstaff--Schwartz but with neural nets instead of polynomial
+  regression. DBDP2 gets $Z_n$ by auto-differentiating through the trained
+  network.
   \item \textbf{Deep splitting}~\cite{beck2021deep}: Reformulates the PDE
-  solution as a fixed-point problem across time steps and solves each step
-  independently, avoiding the end-to-end training of the deep BSDE method.
+  as a fixed-point problem across time steps. Each step is independent,
+  which avoids the end-to-end backpropagation of the deep BSDE method.
+  Arguably more stable. Arguably slower.
 \end{itemize}
 
 
@@ -488,7 +506,7 @@ Two notable alternatives address some of these limitations:
 \subsection{Forward SDE Discretization}\label{sec:sde_schemes}
 
 We discretize the forward SDE~\eqref{eq:fbsde_forward} on a uniform time
-grid with step size $\Delta t = T/N$.
+grid with step size $\Delta t = T/N$. Two standard schemes.
 
 \paragraph{Euler--Maruyama.}
 $X_{n+1} = X_n + b(t_n, X_n)\Delta t + \sigma(t_n, X_n)\Delta W_n$,
@@ -502,10 +520,10 @@ $\sigma_n' = \sigma$.
 
 \subsection{Classical BSDE: Least-Squares Regression}\label{sec:bsde_numerics}
 
-Following Bouchard and Touzi~\cite{bouchard2004discrete},
+This follows Bouchard and Touzi~\cite{bouchard2004discrete},
 Zhang~\cite{zhang2004numerical}, and Gobet, Lemor, and
-Warin~\cite{gobet2005regression}, we discretize the BSDE backward in time.
-On the grid $\{t_0, \ldots, t_N\}$:
+Warin~\cite{gobet2005regression}. The idea is to discretize the BSDE backward
+in time on the grid $\{t_0, \ldots, t_N\}$:
 \begin{align}
   Y_N &= g(X_N), \label{eq:bsde_terminal}\\
   Z_n &= \frac{1}{\Delta t}\E\!\left[Y_{n+1}\Delta W_n \mid \F_{t_n}\right],
@@ -513,51 +531,55 @@ On the grid $\{t_0, \ldots, t_N\}$:
   Y_n &= \E\!\left[Y_{n+1} + f(t_n, Y_{n+1}, Z_n)\Delta t
     \mid \F_{t_n}\right]. \label{eq:Y_regression}
 \end{align}
-The conditional expectations~\eqref{eq:Z_regression}--\eqref{eq:Y_regression}
-are approximated by projecting onto a polynomial basis of $X_{t_n}$.  Given
-$M$ Monte Carlo paths, we construct the normalized polynomial basis
+The conditional
+expectations~\eqref{eq:Z_regression}--\eqref{eq:Y_regression} are computed by
+projecting onto a polynomial basis of $X_{t_n}$. Given $M$ Monte Carlo paths,
+you build the normalized polynomial basis
 $\Phi(X_n^{(m)}) = (1, \tilde{X}, \tilde{X}^2, \ldots, \tilde{X}^p)$ of
-degree $p$ and solve for regression coefficients by ordinary least squares.
+degree $p$ and solve for regression coefficients by OLS.
 
-This extends the Longstaff--Schwartz~\cite{longstaff2001valuing} regression
-technique from American option pricing to the full BSDE setting.
+This is really the Longstaff--Schwartz~\cite{longstaff2001valuing} technique,
+repurposed from American option pricing to the full BSDE setting. Same
+bones, different animal.
 
 \begin{remark}[Convergence of the classical solver]
-Zhang~\cite{zhang2004numerical} proved that the backward Euler scheme converges
-at rate $O(\sqrt{\Delta t})$ in $L^2$ for the $Y$ process.  The total error
-comprises the time discretization error $O(\Delta t)$, the regression
-approximation error (controlled by the basis richness), and the Monte Carlo
-sampling error $O(M^{-1/2})$.  In practice, the Monte Carlo error often
-dominates.
+Zhang~\cite{zhang2004numerical} showed the backward Euler scheme converges at
+rate $O(\sqrt{\Delta t})$ in $L^2$ for the $Y$ process. Your total error has
+three pieces: time discretization at $O(\Delta t)$, regression approximation
+error (depends on how rich your basis is), and Monte Carlo sampling error at
+$O(M^{-1/2})$. In practice, the Monte Carlo noise dominates unless you throw
+a truly absurd number of paths at it.
 \end{remark}
 
 \subsection{PDE Solver: Crank--Nicolson with Picard Iteration}
 
 For low-dimensional problems, we solve the nonlinear
-PDE~\eqref{eq:nonlinear_pde} directly via the Crank--Nicolson scheme
-($\theta = 1/2$) on a uniform grid in $(S, t)$.  The linear system at each
-time step is solved by sparse LU factorization.  For nonlinear terms
-$h(S, u, Su_S)$, we employ Picard (fixed-point) iteration within each time
-step: starting from the previous time level, we evaluate the nonlinear term,
-solve the modified linear system, and iterate 4--5 times.  Convergence is
-guaranteed for small $\Delta t$ by the contraction mapping theorem applied to
-the Lipschitz nonlinearity.
+PDE~\eqref{eq:nonlinear_pde} directly. The Crank--Nicolson scheme
+($\theta = 1/2$) runs on a uniform grid in $(S, t)$. At each time step,
+the linear system is cracked open with sparse LU factorization. The
+nonlinear terms $h(S, u, Su_S)$ are handled by Picard iteration: start from
+the previous time level, evaluate the nonlinearity, solve the modified linear
+system, repeat 4--5 times. Convergence follows from the contraction mapping
+theorem applied to the Lipschitz nonlinearity, as long as $\Delta t$ is small
+enough. It always was, in my experiments. I didn't try to find out what
+happens when it isn't.
 
 \subsection{Deep BSDE: PyTorch Implementation}
 
-Our deep BSDE implementation uses PyTorch with the following specifics:
+The deep BSDE solver is written in PyTorch. Specifics:
 \begin{itemize}
-  \item $N = 20$ time steps; at each step, a \texttt{SubNet} with
-  $L = 2$ hidden layers of width 64, batch normalization, and ReLU activation.
-  \item $Y_0$ is initialized to $0.5$ and trained with a $10\times$ higher
-  learning rate than the subnet parameters.
-  \item Adam optimizer with learning rate $5 \times 10^{-3}$, step-wise decay
-  (factor $0.5$ every $N_{\text{epochs}}/3$ epochs), and gradient clipping at
+  \item $N = 20$ time steps. Each step has a \texttt{SubNet} with
+  $L = 2$ hidden layers, width 64, batch normalization, ReLU.
+  \item $Y_0$ starts at $0.5$ and trains with $10\times$ the learning
+  rate of the subnet parameters. This was important---without it, $Y_0$
+  barely moved.
+  \item Adam optimizer, learning rate $5 \times 10^{-3}$, step decay
+  (factor $0.5$ every $N_{\text{epochs}}/3$ epochs), gradient clipping at
   norm $5.0$.
-  \item Batch size $256$; training for $800$ epochs on CPU.
+  \item Batch size $256$; $800$ epochs; CPU only.
 \end{itemize}
 
-Four benchmark problems are implemented:
+Four benchmarks:
 \begin{enumerate}
   \item \textbf{Black--Scholes (heat equation):} $f \equiv 0$,
   $g(x) = \norm{x}^2$, exact $u(0,x) = \norm{x}^2 + d\sigma^2 T$.
@@ -577,9 +599,9 @@ Four benchmark problems are implemented:
 
 \subsection{CVA as a Nonlinear BSDE}
 
-Consider a netting set of derivatives with risk-free value $V_t$.  In the
-presence of counterparty default risk with intensity $\lambda_t$ and loss-given-default
-$\text{LGD} = 1 - R$ (recovery rate $R$), the CVA-adjusted value
+Take a netting set of derivatives with risk-free value $V_t$. Add
+counterparty default risk---intensity $\lambda_t$, loss-given-default
+$\text{LGD} = 1 - R$ with recovery rate $R$---and the CVA-adjusted value
 $\tilde{V}_t$ satisfies the BSDE:
 \begin{equation}\label{eq:cva_bsde}
   -\mathrm{d}\tilde{V}_t = \left[-r_t \tilde{V}_t
@@ -587,31 +609,33 @@ $\tilde{V}_t$ satisfies the BSDE:
   - Z_t^\top \dW_t,
   \quad \tilde{V}_T = g(X_T).
 \end{equation}
-The term $\lambda_t \cdot \text{LGD} \cdot (\tilde{V}_t)^+$ represents the
-expected loss from counterparty default on positive exposure.  The unilateral
-CVA is then $\text{CVA}_0 = V_0 - \tilde{V}_0$.
+The $\lambda_t \cdot \text{LGD} \cdot (\tilde{V}_t)^+$ term is the expected
+loss from the counterparty defaulting on positive exposure. Unilateral CVA is
+then $\text{CVA}_0 = V_0 - \tilde{V}_0$.
 
 \begin{remark}[Nonlinear coupling in bilateral CVA/FVA]
-When extending to bilateral CVA (including DVA for one's own default) and
-FVA (funding valuation adjustment), the driver becomes:
+If you go bilateral---add DVA for your own default and FVA for funding
+costs---the driver gets ugly:
 \[
   f(t, v, z) = -r_t v - \lambda^c_t \cdot \text{LGD}^c \cdot v^+
   + \lambda^s_t \cdot \text{LGD}^s \cdot v^-
   + (r_f - r_t) \cdot h(v, z),
 \]
-where $\lambda^c, \lambda^s$ are the counterparty and self default intensities,
-$r_f$ is the funding rate, and $h$ captures the funding requirement.  This
-creates genuine nonlinear coupling: the funding cost depends on the derivative
-value, which depends on the funding cost.  The BSDE framework handles this
-naturally through the Lipschitz fixed-point structure of
-Theorem~\ref{thm:existence}, as formalized
-in~\cite{bichuch2018xva,crepey2014counterparty}.
+where $\lambda^c, \lambda^s$ are counterparty and self default intensities,
+$r_f$ is the funding rate, and $h$ captures funding requirements. Now you've
+got genuine circular dependence: funding cost depends on the derivative value
+which depends on funding cost. This is exactly the kind of problem that makes
+people stare at whiteboards for weeks. But for BSDEs, it's just another
+Lipschitz driver. The fixed-point structure of
+Theorem~\ref{thm:existence} handles it, as
+Bichuch et al.~\cite{bichuch2018xva} and
+Cr\'{e}pey et al.~\cite{crepey2014counterparty} showed.
 \end{remark}
 
 \subsection{Our CVA Computation}
 
-We compute unilateral CVA on a netting set of $7$ interest rate swaps under
-the Vasicek short-rate model:
+I computed unilateral CVA on a netting set of $7$ interest rate swaps under
+a Vasicek short-rate model:
 \[
   \mathrm{d}r_t = \kappa(\theta - r_t)\dt + \sigma_r \dW_t,
 \]
@@ -619,26 +643,27 @@ with $r_0 = 0.03$, $\kappa = 0.5$, $\theta = 0.04$, $\sigma_r = 0.01$.
 The counterparty has constant default intensity $\lambda = 0.02$ and recovery
 $R = 0.4$ ($\text{LGD} = 0.6$).
 
-We compute:
+Three things get computed:
 \begin{enumerate}
   \item \textbf{Exposure profiles:} Expected Exposure $\text{EE}(t) = \E[V_t^+]$
   and Expected Positive Exposure $\text{EPE} = \frac{1}{T}\int_0^T \text{EE}(t)\dt$.
   \item \textbf{Monte Carlo CVA:}
   $\text{CVA}_{\text{MC}} = \text{LGD} \int_0^T \lambda \cdot D(0,t) \cdot
   \text{EE}(t) \dt$, where $D(0,t)$ is the discount factor.
-  \item \textbf{BSDE CVA:} Solving the BSDE~\eqref{eq:cva_bsde} via
-  backward regression with a 2D basis on $(r_t, V_t)$.
+  \item \textbf{BSDE CVA:} Solving~\eqref{eq:cva_bsde} backward via
+  regression with a 2D basis on $(r_t, V_t)$.
 \end{enumerate}
 
-The BSDE approach has the conceptual advantage of naturally extending to the
-nonlinear bilateral CVA/FVA setting without fundamental algorithmic changes.
+The BSDE approach has a conceptual edge: it extends to the nonlinear bilateral
+CVA/FVA setting without you having to redesign the algorithm. You just change
+the driver. I keep saying this because it keeps being true.
 
 % ===================================================================
 \section{$g$-Expectations and Dynamic Risk Measures}\label{sec:g_expectations}
 
 \subsection{Peng's $g$-Expectation}
 
-Given a BSDE with driver $g$ (which depends only on $z$, not on $y$):
+Given a BSDE with driver $g$ (depending only on $z$, not $y$):
 \begin{equation}\label{eq:g_bsde}
   -\mathrm{d}Y_t = g(t, Z_t)\dt - Z_t^\top \dW_t, \quad Y_T = \xi,
 \end{equation}
@@ -675,13 +700,13 @@ solution; see~\cite[Chapter~7]{zhang2017backward}.
 
 \subsection{The Sublinear Generator $g(z) = \gamma|z|$}
 
-We focus on the generator $g(t, z) = \gamma \abs{z}$ with $\gamma > 0$.  This
-is sublinear and positively homogeneous, so $\mathcal{E}^g$ defines a coherent
-risk measure.  Financially, this $g$-expectation corresponds to worst-case
-pricing under drift ambiguity: the market price of risk is uncertain within
-a ball of radius $\gamma$ around zero.  The parameter $\gamma$ controls the
-degree of risk aversion, with $\gamma = 0$ recovering the linear conditional
-expectation.
+We focus on $g(t, z) = \gamma \abs{z}$ with $\gamma > 0$. This generator is
+sublinear and positively homogeneous, so $\mathcal{E}^g$ gives a coherent risk
+measure. The financial interpretation: you're doing worst-case pricing under
+drift ambiguity. The market price of risk could be anything in a ball of
+radius $\gamma$ around zero, and you're assuming nature picks the worst one.
+When $\gamma = 0$, you're back to linear conditional expectation---no
+ambiguity, no risk premium.
 
 \subsection{Connection to Entropic Risk Measures}
 
@@ -689,37 +714,40 @@ For comparison, the entropic risk measure with parameter $\theta > 0$ is:
 \begin{equation}\label{eq:entropic}
   \rho_\theta(\xi) = \frac{1}{\theta}\ln \E\!\left[e^{-\theta\xi}\right].
 \end{equation}
-This is a convex (but not coherent) risk measure arising from
-Kullback--Leibler divergence penalization.  It does not admit a direct
-$g$-expectation representation (the corresponding BSDE has a quadratic
-generator $g(z) = \frac{\theta}{2}\norm{z}^2$, which is superlinear).
+This one is convex but not coherent. It comes from Kullback--Leibler divergence
+penalization and doesn't have a direct $g$-expectation representation---the
+corresponding BSDE generator is $g(z) = \frac{\theta}{2}\norm{z}^2$, which is
+quadratic, which is superlinear. The theory still works, but you lose positive
+homogeneity and with it coherence.
 
 \subsection{Connection to $G$-Expectations and 2BSDEs}
 
 Peng's later work on $G$-expectations~\cite{peng2019nonlinear} and the
 second-order BSDEs (2BSDEs) of Soner, Touzi, and
-Zhang~\cite{sonertouziizhang2012wellposedness} extend the framework to handle
-volatility uncertainty (not just drift uncertainty).  A 2BSDE replaces the
-single volatility $\sigma$ with a family of volatilities, leading to fully
-nonlinear PDEs.  This provides the theoretical foundation for the uncertain
-volatility model of Avellaneda--Levy--Par\'{a}s and generalizes it to higher
-dimensions.
+Zhang~\cite{sonertouziizhang2012wellposedness} push the framework further.
+Instead of drift uncertainty, you get volatility uncertainty. A 2BSDE
+replaces the single volatility $\sigma$ with a family of volatilities, and
+the associated PDE is fully nonlinear. This gives theoretical backing to the
+uncertain volatility model of Avellaneda--Levy--Par\'{a}s and generalizes it
+to arbitrary dimension. I didn't implement 2BSDEs here---that's a different
+paper, probably a longer one.
 
 
 % ===================================================================
 \section{Results}\label{sec:results}
 
 All classical experiments use $S_0 = K = 100$, $r = 0.05$, $\sigma = 0.20$,
-$T = 1$ year.  The BSDE solver uses $M = 50{,}000$ paths with degree-4
-polynomial regression; the PDE solver uses a $200 \times 500$ grid with
-$S_{\max} = 400$.  Deep BSDE experiments use $\sigma = 1$, $T = 1$,
-$N = 20$ time steps, batch size 256, and 800 training epochs on CPU.
+$T = 1$ year. The BSDE solver runs $M = 50{,}000$ paths with degree-4
+polynomial regression; the Crank--Nicolson solver uses a $200 \times 500$ grid
+with $S_{\max} = 400$. Deep BSDE experiments: $\sigma = 1$, $T = 1$,
+$N = 20$ time steps, batch size 256, 800 epochs, CPU.
 
 \subsection{Classical Results: BSDE vs PDE Verification}
 
-Figure~\ref{fig:bsde_vs_pde} verifies the nonlinear Feynman--Kac theorem
-in the linear case: BSDE prices computed at 25 spot levels match the PDE
-solution to within $0.10$ across $S \in [60, 140]$.
+Figure~\ref{fig:bsde_vs_pde} is the sanity check. It verifies the nonlinear
+Feynman--Kac theorem in the linear case: BSDE prices at 25 spot levels match
+the Crank--Nicolson PDE solution to within $0.10$ across $S \in [60, 140]$. If
+this hadn't worked, nothing else in the paper would mean anything.
 
 \begin{figure}[t]
   \centering
@@ -730,9 +758,10 @@ solution to within $0.10$ across $S \in [60, 140]$.
   \label{fig:bsde_vs_pde}
 \end{figure}
 
-Figure~\ref{fig:price_surfaces} compares initial-time prices under four
-models (linear, transaction costs, funding costs, uncertain volatility).  All
-nonlinear frictions increase the price relative to the Black--Scholes baseline.
+Figure~\ref{fig:price_surfaces} compares prices at $t=0$ under four
+models: linear, transaction costs, funding costs, uncertain volatility. Every
+nonlinear friction pushes the price above the Black--Scholes baseline, which is
+what the comparison theorem predicts.
 
 \begin{figure}[t]
   \centering
@@ -744,9 +773,11 @@ nonlinear frictions increase the price relative to the Black--Scholes baseline.
 
 \subsection{Convergence Analysis}
 
-Figure~\ref{fig:sde_convergence} confirms the expected SDE convergence rates:
-Euler--Maruyama achieves strong order $1/2$ and weak order $1$; Milstein
-achieves strong order $1$ and weak order $1$.
+Figure~\ref{fig:sde_convergence} confirms SDE convergence rates.
+Euler--Maruyama: strong order $1/2$, weak order $1$. Milstein: strong order
+$1$, weak order $1$. Exactly what the textbooks say. I ran this mainly to
+make sure my SDE simulator wasn't broken before building the BSDE layer on
+top of it.
 
 \begin{figure}[t]
   \centering
@@ -756,9 +787,11 @@ achieves strong order $1$ and weak order $1$.
   \label{fig:sde_convergence}
 \end{figure}
 
-Figure~\ref{fig:bsde_convergence} shows the BSDE solver error decreasing as
-$O(N^{-1/2})$ with increasing time steps, consistent with the Monte Carlo
-error dominating at the path counts used.
+Figure~\ref{fig:bsde_convergence} shows BSDE solver error dropping as
+$O(N^{-1/2})$ with more time steps. That $-1/2$ rate means the Monte Carlo
+noise is dominating at these path counts, not the time discretization. If I
+wanted the rate to improve, I'd need more paths. With 50,000 paths and my
+laptop's fan already screaming, I decided to move on.
 
 \begin{figure}[t]
   \centering
@@ -770,9 +803,9 @@ error dominating at the path counts used.
 
 \subsection{Pricing Under Frictions}
 
-Figure~\ref{fig:transaction_costs} shows that increasing transaction costs
-$\kappa$ monotonically increases option prices, with ATM options most affected
-(highest gamma).
+Figure~\ref{fig:transaction_costs} shows the obvious: cranking up $\kappa$
+monotonically increases option prices. ATM options get hit hardest---highest
+gamma means the most rebalancing, which means the most transaction costs.
 
 \begin{figure}[t]
   \centering
@@ -782,9 +815,9 @@ $\kappa$ monotonically increases option prices, with ATM options most affected
   \label{fig:transaction_costs}
 \end{figure}
 
-Figure~\ref{fig:uncertain_vol} displays the worst-case pricing bound under
-uncertain volatility, lying near the upper Black--Scholes bound for convex
-payoffs.
+Figure~\ref{fig:uncertain_vol} shows the worst-case price under uncertain
+volatility. It sits near the upper Black--Scholes bound, which makes sense for
+a convex payoff. Nature picks the high vol because that's what hurts you.
 
 \begin{figure}[t]
   \centering
@@ -794,8 +827,9 @@ payoffs.
   \label{fig:uncertain_vol}
 \end{figure}
 
-Figure~\ref{fig:sample_paths} displays forward SDE sample paths for GBM, CEV,
-and Heston models, illustrating the leverage effect and volatility clustering.
+Figure~\ref{fig:sample_paths} shows forward SDE sample paths for GBM, CEV,
+and Heston. The Heston paths have that clumpy, volatile-then-quiet character
+you expect from stochastic volatility.
 
 \begin{figure}[t]
   \centering
@@ -805,8 +839,8 @@ and Heston models, illustrating the leverage effect and volatility clustering.
   \label{fig:sample_paths}
 \end{figure}
 
-Figure~\ref{fig:bsde_nonlinear} shows BSDE prices under all four drivers,
-qualitatively consistent with the PDE results.
+Figure~\ref{fig:bsde_nonlinear} has BSDE prices under all four drivers. They
+match the PDE results qualitatively, as they should.
 
 \begin{figure}[t]
   \centering
@@ -819,11 +853,11 @@ qualitatively consistent with the PDE results.
 \subsection{Deep BSDE Results}
 
 \paragraph{Training dynamics.}
-Figure~\ref{fig:deep_training} shows training loss curves for all four
-benchmarks at $d = 10$.  The Black--Scholes problem converges to a loss near
-$1.8$, with $Y_0$ stabilizing at $10.00$ (exact value: $d \sigma^2 T = 10$).
-The Allen--Cahn and HJB problems also converge, though with higher residual
-loss reflecting the difficulty of approximating nonlinear drivers.
+Figure~\ref{fig:deep_training} shows loss curves for all four benchmarks at
+$d = 10$. Black--Scholes converges to a loss near $1.8$, with $Y_0$
+settling at $10.00$ (exact: $d \sigma^2 T = 10$). Allen--Cahn and HJB also
+converge, though the residual loss is higher---nonlinear drivers are harder to
+approximate, no surprise.
 
 \begin{figure}[t]
   \centering
@@ -835,14 +869,13 @@ loss reflecting the difficulty of approximating nonlinear drivers.
 \end{figure}
 
 \paragraph{Dimension scaling.}
-Figure~\ref{fig:deep_convergence} tests the Black--Scholes benchmark across
-$d \in \{5, 10, 20, 50\}$.  At $d = 5$ and $d = 10$, the relative error is
-below $1\%$, confirming that the method accurately solves these
-moderate-dimensional problems.  At $d = 20$ and $d = 50$, the relative error
-increases---reflecting the challenge of training with a fixed budget of $800$
-epochs and batch size $256$ as dimension grows.  In the original
-paper~\cite{han2018solving}, significantly more training was used (with GPU
-acceleration) to achieve sub-percent errors at $d = 100$.
+Figure~\ref{fig:deep_convergence} tests Black--Scholes across
+$d \in \{5, 10, 20, 50\}$. At $d = 5$ and $d = 10$, relative error is under
+$1\%$. Good. At $d = 20$ and $d = 50$, the error grows---we're
+under-training. 800 epochs and batch size 256 on CPU just isn't enough
+compute for 50 dimensions. The original
+paper~\cite{han2018solving} used GPU acceleration and far more training to get
+sub-percent errors at $d = 100$. I don't have that hardware budget.
 
 \begin{figure}[t]
   \centering
@@ -855,10 +888,11 @@ acceleration) to achieve sub-percent errors at $d = 100$.
 
 \paragraph{Benchmark solutions.}
 Figure~\ref{fig:deep_solutions} summarizes $Y_0$ across all benchmarks at
-$d = 10$.  For Black--Scholes, the deep BSDE solution matches the exact value
-to $0.02\%$ relative error.  For Allen--Cahn ($Y_0 \approx 0.39$), HJB
-($Y_0 \approx 1.47$), and Bergman ($Y_0 \approx 1.51$), the solutions
-are consistent across runs and the training loss curves show convergence.
+$d = 10$. Black--Scholes matches the exact value to $0.02\%$ relative error.
+Allen--Cahn gives $Y_0 \approx 0.39$, HJB gives $Y_0 \approx 1.47$, and
+Bergman gives $Y_0 \approx 1.51$. These are consistent across runs and the
+loss curves look converged. I'd feel better with reference solutions for the
+last three, but the convergence behavior gives me reasonable confidence.
 
 \begin{figure}[t]
   \centering
@@ -870,13 +904,14 @@ are consistent across runs and the training loss curves show convergence.
 \end{figure}
 
 \paragraph{Ablation study.}
-Figure~\ref{fig:ablation} shows the effect of network width, depth, and
-learning rate on the Black--Scholes benchmark at $d = 10$ (300 epochs).
-All configurations are under-trained at this short budget, but the learning
-rate has the strongest effect: $\text{lr} = 5 \times 10^{-3}$ brings $Y_0$
-closest to the exact value.  Network width and depth have smaller effects,
-consistent with the finding that the deep BSDE method is more sensitive to
-optimization hyperparameters than architecture.
+Figure~\ref{fig:ablation} varies network width, depth, and learning rate on
+Black--Scholes at $d = 10$ with only 300 epochs. Everything is under-converged
+at this budget---the point is to see which knob matters most. Answer: learning
+rate. $\text{lr} = 5 \times 10^{-3}$ gets $Y_0$ closest to the truth. Width
+and depth barely matter by comparison. Hyperparameter sensitivity being
+dominated by the optimizer rather than the architecture feels like a sign
+that the problem is more about optimization than representation. Or I'm
+reading too much into 300 epochs.
 
 \begin{figure}[t]
   \centering
@@ -891,11 +926,11 @@ optimization hyperparameters than architecture.
 \subsection{CVA Results}
 
 \paragraph{Exposure profiles.}
-Figure~\ref{fig:cva_exposures} shows the expected exposure (EE) profile for
-the 7-swap netting set over a 10-year horizon.  The EE profile peaks in the
-mid-life of the swaps, reflecting the rolloff of shorter-maturity instruments
-and the time decay of longer-maturity exposures.  The 95th percentile of
-positive exposure shows significant tail risk.
+Figure~\ref{fig:cva_exposures} shows expected exposure for the 7-swap netting
+set over 10 years. The EE profile peaks around the middle of the portfolio's
+life, which makes sense: the short-maturity swaps roll off, and the
+long-maturity exposures decay. The 95th percentile band shows the tail risk
+is substantial.
 
 \begin{figure}[t]
   \centering
@@ -907,12 +942,15 @@ positive exposure shows significant tail risk.
 \end{figure}
 
 \paragraph{CVA comparison.}
-Figure~\ref{fig:cva_bsde} compares CVA computed via Monte Carlo integration
-and via the BSDE approach.  The Monte Carlo CVA integrates
+Figure~\ref{fig:cva_bsde} puts the Monte Carlo and BSDE CVA numbers side by
+side. The Monte Carlo approach integrates
 $\text{LGD} \cdot \lambda \cdot D(0,t) \cdot \text{EE}(t)$ over the time
-horizon.  The BSDE CVA solves the nonlinear
-equation~\eqref{eq:cva_bsde} backward in time.  Both methods produce CVA
-estimates of the same order of magnitude, validating the BSDE formulation.
+horizon. The BSDE approach solves~\eqref{eq:cva_bsde} backward. Both produce
+CVA estimates of the same order of magnitude. They don't match exactly, and I
+spent a while worrying about that until I realized the BSDE regression uses a
+different path set from the MC integration and the basis functions aren't
+capturing all the variance. Close enough to validate the formulation; not
+close enough that I'd call it production-ready.
 
 \begin{figure}[t]
   \centering
@@ -925,12 +963,12 @@ estimates of the same order of magnitude, validating the BSDE formulation.
 \subsection{$g$-Expectation Results}
 
 \paragraph{Risk aversion.}
-Figure~\ref{fig:g_expectation} shows the $g$-expectation of a European call
-payoff for varying risk aversion $\gamma \in \{0, 0.05, 0.1, 0.2, 0.5\}$
-(with generator $g(z) = \gamma|z|$).  As $\gamma$ increases, the $g$-expectation
-at $t = 0$ increases, reflecting the worst-case pricing under greater drift
-ambiguity.  The right panel shows the monotone relationship between $\gamma$
-and $\mathcal{E}^g_0[\xi]$.
+Figure~\ref{fig:g_expectation} plots the $g$-expectation of a European call
+payoff for $\gamma \in \{0, 0.05, 0.1, 0.2, 0.5\}$, using the generator
+$g(z) = \gamma|z|$. Higher $\gamma$ means more drift ambiguity, which means
+a higher $g$-expectation at $t = 0$---you're pricing under a worse assumption
+about the world. The right panel shows this relationship is monotone and
+roughly linear for small $\gamma$, then curves upward.
 
 \begin{figure}[t]
   \centering
@@ -942,13 +980,15 @@ and $\mathcal{E}^g_0[\xi]$.
 \end{figure}
 
 \paragraph{Time-consistency.}
-Figure~\ref{fig:time_consistency} verifies the time-consistency property
-$\mathcal{E}^g_0[\mathcal{E}^g_t[\xi]] = \mathcal{E}^g_0[\xi]$ at multiple
-intermediate times $t$.  The direct computation (solving from $T$ to $0$)
-and the composed computation (solving from $T$ to $t$, then from $t$ to $0$)
-agree to high precision.  This is a
-non-trivial numerical verification: time-consistency is a structural property
-of BSDEs that distinguishes $g$-expectations from ad hoc risk measures.
+Figure~\ref{fig:time_consistency} is the verification I'm most pleased with.
+The property
+$\mathcal{E}^g_0[\mathcal{E}^g_t[\xi]] = \mathcal{E}^g_0[\xi]$ should hold
+at every intermediate time $t$. I computed it both ways: directly (solve from
+$T$ to $0$) and by composition (solve from $T$ to $t$, then from $t$ to $0$).
+They agree to high precision. This is non-trivial numerically. Time-consistency
+is the structural property that separates $g$-expectations from ad hoc risk
+measures you might cook up on a whim. Actually checking it feels like kicking
+the tires on something you're supposed to just believe.
 
 \begin{figure}[t]
   \centering
@@ -963,62 +1003,65 @@ of BSDEs that distinguishes $g$-expectations from ad hoc risk measures.
 % ===================================================================
 \section{Conclusion}\label{sec:conclusion}
 
-This paper connected classical BSDE
-theory, deep learning solvers, XVA computation, and dynamic risk measures
-within a single computational framework.  The main takeaways:
+This paper connected BSDE theory, deep solvers, XVA computation, and dynamic
+risk measures in a single codebase. Here's what came out of it:
 
 \begin{enumerate}
-  \item \textbf{Theoretical development.}  We stated the Pardoux--Peng
+  \item \textbf{Theoretical development.}  I stated the Pardoux--Peng
   existence theorem, the comparison theorem, and the nonlinear Feynman--Kac
-  theorem with proof sketches, and showed how each common market friction
+  theorem with proof sketches, and showed how each standard market friction
   (transaction costs, uncertain volatility, differential rates) maps to a
-  specific Lipschitz driver.
+  specific Lipschitz driver. The driver-as-friction correspondence is the
+  conceptual core of the whole framework.
 
   \item \textbf{Classical verification.}  The least-squares regression BSDE
-  solver and Crank--Nicolson PDE solver produce consistent prices across all
-  tested drivers, with the expected convergence rates for both forward SDE
-  schemes and the backward BSDE regression.
+  solver and the Crank--Nicolson PDE solver agree across all tested drivers,
+  with the expected convergence rates for both forward SDE schemes and backward
+  BSDE regression.
 
-  \item \textbf{Deep BSDE implementation.}  Our PyTorch implementation of the
-  E--Han--Jentzen method achieves sub-percent relative error on the
-  Black--Scholes benchmark at $d = 10$, and produces converged solutions for
-  the Allen--Cahn, HJB, and Bergman benchmarks.  Dimension scaling experiments
-  show the method's promise for moderate-dimensional problems, while ablation
-  studies confirm the importance of learning rate tuning.
+  \item \textbf{Deep BSDE implementation.}  The PyTorch implementation of the
+  E--Han--Jentzen method hits sub-percent relative error on Black--Scholes at
+  $d = 10$ and produces converged solutions for Allen--Cahn, HJB, and Bergman.
+  At higher dimensions the method works but needs more compute than I had.
+  The ablation study suggests learning rate matters more than architecture,
+  which is either reassuring or depressing depending on your perspective.
 
-  \item \textbf{CVA via BSDEs.}  We computed unilateral CVA on a 7-swap
-  netting set under a Vasicek model, demonstrating both Monte Carlo and BSDE
-  approaches and discussing the natural extension to bilateral CVA/FVA.
+  \item \textbf{CVA via BSDEs.}  I computed unilateral CVA on a 7-swap netting
+  set under Vasicek, using both Monte Carlo and BSDE approaches. They agree in
+  magnitude. The BSDE formulation extends naturally to bilateral CVA/FVA.
 
-  \item \textbf{$g$-expectations.}  We verified time-consistency of
-  $g$-expectations with sublinear generators, confirming the theoretical
-  prediction that BSDE-based risk measures are dynamically consistent, and
-  compared with entropic risk measures.
+  \item \textbf{$g$-expectations.}  Time-consistency of $g$-expectations with
+  sublinear generators checks out numerically, confirming that BSDE-based risk
+  measures really are dynamically consistent. I also compared with entropic
+  risk measures to show what you gain and lose with different generator choices.
 \end{enumerate}
 
-\paragraph{Open directions.}
-Several extensions are natural from this foundation:
+\paragraph{What I didn't do.}
+Some natural extensions I'm leaving on the table:
 \begin{itemize}
   \item \textbf{Path-dependent BSDEs.}  Dupire's functional It\^{o} calculus
-  enables BSDEs driven by path-dependent functionals, relevant for Asian
-  options and lookback features.
+  enables BSDEs driven by path-dependent functionals---think Asian options,
+  lookback features. I'd need a different numerical framework.
   \item \textbf{Reflected BSDEs.}  Adding a reflecting barrier $Y_t \ge L_t$
-  gives the American option pricing problem.  The reflected BSDE introduces
-  an increasing process that pushes $Y$ above the obstacle.
+  gives American option pricing. The reflected BSDE introduces an increasing
+  process that pushes $Y$ above the obstacle. This is well-understood
+  theoretically but I haven't coded it.
   \item \textbf{Second-order BSDEs.}  The 2BSDEs of Soner, Touzi, and
-  Zhang~\cite{sonertouziizhang2012wellposedness} handle volatility uncertainty
-  (fully nonlinear PDEs), extending the framework from semilinear to fully
-  nonlinear problems.
-  \item \textbf{Scaling deep methods.}  With GPU training and larger networks,
-  the deep BSDE method can push to hundreds of dimensions, tackling
-  basket CVA and high-dimensional control problems.
+  Zhang~\cite{sonertouziizhang2012wellposedness} handle volatility
+  uncertainty---fully nonlinear PDEs. The gap between semilinear and fully
+  nonlinear is wide, both theoretically and computationally.
+  \item \textbf{Scaling deep methods.}  With a GPU and bigger networks, the
+  deep BSDE method can push to hundreds of dimensions. Basket CVA,
+  high-dimensional stochastic control, things like that. The algorithm is
+  ready; the electricity bill is the constraint.
 \end{itemize}
 
-The overarching message is that BSDEs provide a native mathematical language
-for nonlinear pricing, XVA, and risk measurement.  The combination of rigorous
-theory (existence, uniqueness, comparison, Feynman--Kac) with modern
-computational tools (regression Monte Carlo, deep learning) makes this
-framework both theoretically grounded and practically implementable.
+The recurring theme is that BSDEs give you a single language for nonlinear
+pricing, XVA, and risk measurement. The theory is tight---existence,
+uniqueness, comparison, Feynman--Kac---and the computational tools are there,
+from regression Monte Carlo to neural networks. I think this framework is
+underappreciated relative to how much it can do. But maybe that's just
+because I spent a semester on it.
 
 
 % ===================================================================

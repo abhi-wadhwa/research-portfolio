@@ -11,11 +11,13 @@ chapter is that you \emph{can't} define a measure on all subsets of $\R^n$
 and keep the properties you want. So you start with something weaker ---
 an outer measure --- and then cut down to the sets that behave.
 
+I got a coffee from Dulce before class and nearly burned my tongue off. Good omen for the semester.
+
 Today we set up outer measures and Carath\'eodory's criterion.
 
 \subsection{Outer measures}\label{subsec:outer-measures}
 
-The idea is: outer measures are cheap. You can define them on
+Outer measures are cheap. You can define them on
 \emph{every} subset. The cost is you only get subadditivity, not
 full additivity.
 
@@ -32,12 +34,12 @@ $\mu^* \colon \mathcal{P}(X) \to [0,\infty]$ satisfying
 \end{definition}
 
 That's it. No $\sigma$-algebra needed yet --- we're measuring everything, just
-badly. The subadditivity is the price you pay for working with all of
+badly. Subadditivity is the price you pay for working with all of
 $\mathcal{P}(X)$.
 
 \subsection{Carath\'eodory's criterion}\label{subsec:caratheodory}
 
-Here's where it gets interesting. We want to identify the ``well-behaved''
+Now we want to find the ``well-behaved''
 sets --- the ones where the outer measure actually splits additively.
 
 \begin{definition}[$\mu^*$-measurability]\label{def:caratheodory}
@@ -48,11 +50,10 @@ $E \subseteq X$,
 \]
 \end{definition}
 
-This definition confused me for a while. Why test against \emph{every} set $E$?
-Brian explained it like this: you already get $\le$ from subadditivity for free.
+I stared at this definition for an embarrassingly long time the first week. Why test against \emph{every} set $E$?
+Brian explained it over lunch: you already get $\le$ from subadditivity for free.
 So the real content is $\ge$. What you're asking is that $A$ acts as a
 ``clean cut'' --- when you slice any test set $E$ along $A$, no mass leaks out.
-That's the whole point.
 
 \begin{theorem}[Carath\'eodory]\label{thm:caratheodory}
 Let $\mu^*$ be an outer measure on $X$. Then the collection
@@ -88,9 +89,9 @@ criterion trivially. \qedhere
 \end{proof}
 
 \begin{remark}\label{rem:completeness-free}
-That completeness comes for free is a big deal. If you build Lebesgue
+The fact that completeness comes for free matters more than it looks. If you build Lebesgue
 measure via Carath\'eodory, it's automatically complete --- no need for
-the separate completion step you'd do starting from Borel sets.
+the separate completion step you'd do starting from Borel sets. One less thing to worry about.
 \end{remark}
 
 
@@ -117,8 +118,7 @@ dwell on this. Every real analysis book covers it.
 
 \subsection{Radon measures}\label{subsec:radon}
 
-These regularity conditions are everywhere in later chapters, so I'm trying
-to internalize the hierarchy now rather than looking it up every time.
+I'm trying to internalize this hierarchy now instead of looking it up every five minutes for the rest of the semester.
 
 \begin{definition}\label{def:borel-measure}
 A \textbf{Borel measure} on $\R^n$ is a measure defined on
@@ -155,8 +155,7 @@ regularity uses $\sigma$-finiteness (exhaust by balls $B(0,k)$).
 
 I spent two hours on the inner regularity proof before seeing the trick:
 first prove it for finite-measure sets, then extend by writing
-$A = \bigcup_k (A \cap B(0,k))$ and using continuity from below. This
-took me a while.
+$A = \bigcup_k (A \cap B(0,k))$ and using continuity from below. Two hours. I could've been doing literally anything else.
 
 
 \subsection{Measurable functions}\label{subsec:meas-fns}
@@ -189,9 +188,9 @@ measurable sets. Done. The $\inf$ case is similar.
 \end{proof}
 
 \begin{remark}\label{rem:uncountable-sup}
-Uncountable suprema can fail to be measurable. That's why pointwise
+Uncountable suprema can fail to be measurable. Pointwise
 limits work (sequential = countable) but arbitrary sups don't.
-Measurability is a countable-operations theory.
+Measurability is a countable-operations game.
 \end{remark}
 
 TODO: Read Evans pp.\ 7--14 more carefully for the approximation by simple functions stuff.
@@ -200,8 +199,8 @@ TODO: Read Evans pp.\ 7--14 more carefully for the approximation by simple funct
 % ===========================================================================
 \section{August 28, 2024}\label{sec:lec2}
 
-Question for the audience: if a sequence of measurable functions converges
-pointwise, is the convergence ``almost uniform''? Turns out: yes, as long
+Quick question before we start: if a sequence of measurable functions converges
+pointwise, is the convergence ``almost uniform''? Turns out yes, as long
 as you're on a finite measure space. That's Egoroff.
 
 Today we do Egoroff and Lusin, then start on integration.
@@ -209,8 +208,7 @@ Today we do Egoroff and Lusin, then start on integration.
 \subsection{Egoroff's theorem}\label{subsec:egoroff}
 
 This says convergence of measurable functions is ``almost uniform.'' The
-proof is one of those things that looks like pure epsilon management but
-the idea is actually pretty clean.
+proof looks like pure epsilon management at first glance, but the idea underneath is cleaner than you'd think.
 
 \begin{theorem}[Egoroff]\label{thm:egoroff}
 Let $\mu$ be a finite measure on $X$, and let $f_k, f$ be measurable
@@ -254,7 +252,7 @@ with $\mu(A) < \infty$, there exists a compact set $K \subseteq A$ with
 $\mu(A \setminus K) < \varepsilon$ such that $f|_K$ is continuous.
 \end{theorem}
 
-Proof: Evans pp.\ 15--16. The idea is to use inner regularity to
+Proof: Evans pp.\ 15--16. You use inner regularity to
 approximate level sets $\{a_i \le f < a_{i+1}\}$ by compact sets. On the
 union of those compact sets, $f$ is a staircase that can be refined to
 continuous. Tietze extension shows up at one point.
@@ -266,7 +264,7 @@ It comes back for the Riesz representation theorem later.
 
 \subsection{The Lebesgue integral}\label{subsec:integral}
 
-Evans builds the integral the standard way.
+Evans builds the integral the standard way. No surprises.
 
 \begin{definition}\label{def:integral}
 For $f \colon X \to [0, \infty]$ measurable,
@@ -282,7 +280,7 @@ $\int_X s \dd\mu = \sum_{i=1}^N a_i \,\mu(A_i)$.
 For general measurable $f$, write $f = f^+ - f^-$ and define
 $\int f \dd\mu = \int f^+ \dd\mu - \int f^- \dd\mu$, provided at least one
 side is finite. If both are finite, $f$ is \textbf{integrable}
-($f \in L^1$). Nothing fancy.
+($f \in L^1$).
 
 
 \subsection{Monotone convergence theorem}\label{subsec:mct}
@@ -313,8 +311,8 @@ continuity from below. So $\lim \int f_k \ge t \int s$. Let
 $t \nearrow 1$, then sup over simple $s \le f$. \qedhere
 \end{proof}
 
-I initially tried to use DCT to prove this. Circular. MCT has to come
-first --- it's the foundation that everything else rests on.
+I initially tried to use DCT to prove this. That's circular, obviously. MCT has to come
+first --- it's the foundation that everything else rests on. I felt dumb for about ten minutes.
 
 
 \subsection{Fatou's lemma}\label{subsec:fatou}
@@ -363,8 +361,8 @@ So $\limsup \int f_k \le \int f \le \liminf \int f_k$. We're done.
 \end{proof}
 
 The ``apply Fatou twice'' move is one of those things that's obvious after
-you've seen it and baffling before. The domination hypothesis $|f_k| \le g$
-is doing all the heavy lifting: it makes the Fatou inequalities go the right
+you've seen it and genuinely confusing before. The domination hypothesis $|f_k| \le g$
+is doing all the work here: it makes the Fatou inequalities point the right
 way and keeps everything integrable.
 
 \begin{remark}\label{rem:dct-counterex}
@@ -377,8 +375,8 @@ $\int f_k = 1$. No integrable dominator exists.
 % ===========================================================================
 \section{September 4, 2024}\label{sec:lec3}
 
-I accidentally tried to go to class on Monday. Labor Day. Nobody told
-me.
+I accidentally went to the classroom on Monday. Labor Day. Nobody there.
+Sat on the steps for five minutes feeling ridiculous before checking my phone.
 
 Today: product measures, Fubini--Tonelli, and then the covering theorems
 that set up the second half of the chapter.
@@ -422,8 +420,8 @@ measurable rectangles (trivial), extend to simple functions by linearity,
 extend to nonneg measurable by MCT, extend to integrable by splitting
 $f = f^+ - f^-$.
 
-The point is that Tonelli is for $f \ge 0$ and doesn't need integrability,
-while Fubini needs $f \in L^1$. Common trick: use Tonelli on $|f|$ to
+Tonelli is for $f \ge 0$ and doesn't need integrability.
+Fubini needs $f \in L^1$. Common trick: use Tonelli on $|f|$ to
 check integrability, then use Fubini on $f$.
 
 
@@ -461,9 +459,9 @@ $\mathcal{L}^n$ is:
 
 \subsection{Vitali's covering theorem}\label{subsec:vitali}
 
-OK now we get into the technical stuff. Covering theorems aren't glamorous
+And now the technical stuff. Covering theorems aren't glamorous
 but you literally can't differentiate measures without them. I found this
-section painful on first reading.
+section painful on first reading. Like chewing on cardboard, except the cardboard is load-bearing.
 
 \begin{theorem}[Vitali]\label{thm:vitali}
 Let $\mathcal{F}$ be a collection of closed balls in $\R^n$ with
@@ -517,18 +515,16 @@ balls, such that
 \]
 \end{theorem}
 
-Besicovitch is harder than Vitali. The proof is genuinely involved ---
-Evans devotes pp.\ 30--35 to it. The advantage over Vitali: the balls
+Besicovitch is harder than Vitali. Evans devotes pp.\ 30--35 to the proof and it's genuinely involved. The advantage over Vitali: the balls
 don't get enlarged. The trade-off: you get bounded overlap ($N_n$
 families) instead of disjointness in one family. The constant $N_n$
-depends only on dimension, and its exact value doesn't matter.
+depends only on dimension, and its exact value doesn't matter for anything we do.
 
-The geometric core of the proof is a counting argument: at any point,
+The geometric core is a counting argument: at any point,
 the number of balls of comparable radius containing that point is bounded
-by a dimensional constant. The proof is annoying but mechanical.
+by a dimensional constant. Annoying but mechanical.
 
-I won't reproduce it. I followed it once in lecture and I don't think I
-could reproduce it cold.
+I followed it once in lecture and I couldn't reproduce it cold. Not gonna try here.
 
 TODO: redo the Besicovitch proof more carefully.
 
@@ -544,7 +540,7 @@ chapter harder. Worth it though.
 
 \subsection{Differentiation of Radon measures}\label{subsec:differentiation}
 
-This is where the covering theorems pay off. The goal: given two Radon
+Here's where the covering theorems pay off. The goal: given two Radon
 measures $\mu$ and $\nu$, differentiate $\nu$ with respect to $\mu$ by
 looking at ratios on shrinking balls.
 
@@ -556,7 +552,7 @@ For Radon measures $\mu, \nu$ on $\R^n$, define
 when the limit exists (and $\mu(B(x,r)) > 0$ for small $r$).
 \end{definition}
 
-Here's what makes this all work:
+And here's what makes this all work:
 
 \begin{theorem}[Lebesgue--Besicovitch Differentiation]%
 \label{thm:lebesgue-besicovitch}
@@ -571,8 +567,8 @@ measure. Then:
 \end{enumerate}
 \end{theorem}
 
-Part (iii) is saying the singular part is ``invisible'' to the derivative.
-I still find this proof non-obvious even after going through it twice.
+Part (iii) says the singular part is ``invisible'' to the derivative.
+I still find this proof hard to hold in my head even after going through it twice.
 
 \begin{proof}[Proof sketch]
 Evans constructs the Lebesgue decomposition \emph{using} the derivative.
@@ -611,8 +607,8 @@ Let $f \in L^1_{\mathrm{loc}}(\R^n)$. A point $x$ is a
 \]
 \end{definition}
 
-This is stronger than saying the averages converge to $f(x)$. It's saying
-the $L^1$ oscillation around $x$ vanishes. The distinction matters.
+This is stronger than saying the averages converge to $f(x)$. It says
+the $L^1$ oscillation around $x$ vanishes. That distinction matters.
 
 \begin{theorem}\label{thm:lebesgue-points}
 If $f \in L^1_{\mathrm{loc}}(\R^n)$, then $\mathcal{L}^n$-a.e.\ $x$ is
@@ -651,9 +647,9 @@ This follows from the Lebesgue point theorem: if $x$ is a Lebesgue point,
 take $A = \{y : |f(y) - f(x)| < \varepsilon\}$ and check it has density $1$.
 Details on Evans p.\ 46.
 
-These concepts --- Lebesgue points, approximate limits, approximate
-continuity --- come back in a big way in Chapters~5 and~6 when Evans
-discusses BV functions. For now I'm just filing them away.
+Lebesgue points, approximate limits, approximate
+continuity --- these come back in a big way in Chapters~5 and~6 when Evans
+discusses BV functions. I'm filing them away for now and hoping I remember them later.
 
 
 % ===========================================================================
@@ -662,7 +658,7 @@ discusses BV functions. For now I'm just filing them away.
 Last lecture on Chapter~1. We finish with the Riesz representation theorem
 and weak$^*$ compactness for measures. This connects the measure theory to
 functional analysis, and honestly this section feels the most ``structural''
-compared to the covering-theorem grind from last week.
+compared to the covering-theorem grind from last week. I'm holding a sandwich from Lemonade and trying to pay attention.
 
 \subsection{Riesz representation theorem}\label{subsec:riesz}
 
@@ -698,11 +694,10 @@ below with simple functions built from the sets $\{f > t\}$.
 agree on open sets by inner regularity, hence on all Borel sets.
 \end{proof}
 
-I won't pretend I've internalized every detail. The construction in Step~1
-is the key idea --- the linear functional ``tells you'' what the measure of
-each open set should be, and you bootstrap from there. Actually, let me
+I won't pretend I've internalized every detail here. Step~1 is the key idea --- the linear functional ``tells you'' what the measure of
+each open set should be, and you bootstrap from there. Wait, let me
 back up. The reason this works is that open sets are determined from below
-by continuous functions with compact support. That's the bridge.
+by continuous functions with compact support. That's the bridge between the functional-analysis side and the measure-theory side.
 
 TODO: work through the proof more carefully, maybe try it for $\R^1$
 first.
@@ -727,8 +722,8 @@ $\mu$ (written $\mu_k \stackrel{*}{\rightharpoonup} \mu$) if
 \end{definition}
 
 Evans calls this ``weak convergence'' but it's really weak$^*$ ---
-measures live in $(C_c)^*$, not in a space that's itself a dual. This is
-standard confusion in the literature and it used to trip me up.
+measures live in $(C_c)^*$, not in a space that's itself a dual. This
+terminology confusion is everywhere in the literature and it used to trip me up every time.
 
 \begin{theorem}[Weak$^*$ compactness]\label{thm:weak-compactness}
 Let $\{\mu_k\}$ be Radon measures on $\R^n$ with
@@ -779,7 +774,7 @@ measures of specific sets unless the boundary has measure zero.
 \end{example}
 
 \begin{remark}\label{rem:prokhorov}
-In probability, this compactness result is basically Prokhorov's theorem.
+In probability this compactness result is basically Prokhorov's theorem.
 The condition $\sup_k \mu_k(K) < \infty$ is related to tightness. For
 probability measures on $\R^n$, tightness and relative sequential
 compactness in the weak topology are the same thing.
@@ -789,7 +784,7 @@ compactness in the weak topology are the same thing.
 
 That wraps up Chapter~1. A lot of machinery, but the payoff comes later
 when Evans can freely differentiate measures, pass to weak limits, and
-decompose into absolutely continuous and singular parts without reproof.
+decompose into absolutely continuous and singular parts without reproving anything.
 The covering theorems felt like the hardest part; the Riesz representation
 and weak compactness feel the most useful going forward.
 
